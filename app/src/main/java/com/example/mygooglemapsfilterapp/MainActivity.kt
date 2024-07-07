@@ -1,5 +1,6 @@
 package com.example.mygooglemapsfilterapp
 
+// imports for adroid apps
 import android.Manifest
 import android.content.pm.PackageManager
 import android.location.Location
@@ -8,9 +9,11 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 
+// imports for user location
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 
+// imports for the basic map
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -18,15 +21,45 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 
+// imports for searching for things
+import android.widget.SearchView
+
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest
+import com.google.android.libraries.places.api.net.PlacesClient
+
+import com.google.android.libraries.places.api.net.FetchPlaceRequest
+import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
+import com.google.android.libraries.places.api.model.AutocompletePrediction
+import com.google.android.libraries.places.api.net.PlacesStatusCodes
+
+
+// imports for error handling
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
+import com.google.android.gms.tasks.Task
+import android.util.Log
+import android.widget.Toast
+
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var mMap: GoogleMap
     private lateinit var mFusedLocationProviderClient: FusedLocationProviderClient
     private val LOCATION_PERMISSION_REQUEST_CODE = 1
 
+    private lateinit var searchBar: SearchView
+    private lateinit var placesClient: PlacesClient
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        // start places API
+        if (!Places.isInitialized()) {
+            Places.initialize(applicationContext, getString(R.string.google_maps_key))
+        }
+        placesClient = Places.createClient(this)
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         val mapFragment = supportFragmentManager
@@ -34,6 +67,47 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mapFragment.getMapAsync(this)
 
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
+
+        val searchView = findViewById<SearchView>(R.id.search_bar)
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?) : Boolean {
+                query?.let {
+                    searchForLocation(it)
+                }
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                return false
+            }
+        })
+    }
+
+    private fun searchForLocation(query: String) {
+        val request = FindCurrentPlaceRequest.newInstance(listOf(Place.Field.NAME, Place.Field.LAT_LNG))
+        val placeResult = placesClient.findCurrentPlace(request)
+        placeResult.addOnCompleteListener { task ->
+        if (task.isSuccessful) {
+            val response = task.result
+            for (placeLikelihood in response?.placeLikelihoods ?: emptyList()) {
+                val place = placeLikelihood.place
+                // Give each place a marker
+                mMap.addMarker(MarkerOptions().position(place.latLng!!).title(place.name))
+            }
+            // Camera goes to first place
+            response?.placeLikelihoods?.firstOrNull()?.place?.latLng?.let {
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 15f))
+            }
+        } else {
+            // Handle error
+            Log.e("MainActivity", "Place not found: 4{task.exception?.message}")
+            when (task.exception?.message) {
+                "API key is invalid" -> Log.e("MainActivity", "Invalid API Key")
+                "API quota exceeded" -> Log.e("MainActivity", "API Quota Exceeded")
+                else -> Log.e("MainActivity", "Unknown error occured")
+            }
+        }
+        }
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
