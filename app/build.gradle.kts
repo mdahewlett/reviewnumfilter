@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     kotlin("android")
+    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
 }
 
 import java.util.Properties
@@ -9,18 +10,18 @@ val localProperties = Properties().apply {
     load(rootProject.file("local.properties").inputStream())
 }
 
-val mapsApiKey: String = localProperties["MAPS_API_KEY"] as String
+val mapsApiKey: String = localProperties["PLACES_API_KEY"] as String
 // why need to load in local properties through build.gradle.kts?
 
 
 android {
     namespace = "com.example.mygooglemapsfilterapp"
-    compileSdk = 33
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.example.mygooglemapsfilterapp"
         minSdk = 21
-        targetSdk = 33
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -44,17 +45,18 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         viewBinding = true
     }
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.8.0")
+    implementation(platform("org.jetbrains.kotlin:kotlin-stdlib:1.9.0"))
     implementation("androidx.appcompat:appcompat:1.3.1")
 
     implementation("com.google.android.gms:play-services-location:18.0.0")
     implementation("com.google.android.gms:play-services-maps:18.0.2")
-    implementation("com.google.android.libraries.places:places:2.5.0")
+    implementation("com.google.android.libraries.places:places:3.5.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
@@ -66,3 +68,13 @@ dependencies {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+secrets {
+    propertiesFileName = "secrets.properties"
+
+    defaultPropertiesFileName = "local.defaults.properties"
+
+    ignoreList.add("keyToIgnore") 
+    ignoreList.add("sdk.*")       
+}
+        

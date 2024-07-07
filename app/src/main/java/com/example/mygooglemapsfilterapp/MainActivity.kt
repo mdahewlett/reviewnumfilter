@@ -1,11 +1,15 @@
+// how can I get this to be coloured code so it is easier to read
+// can i used type safe etc on top of this?
+
 package com.example.mygooglemapsfilterapp
 
 // imports for adroid apps
 import android.Manifest
 import android.content.pm.PackageManager
 import android.location.Location
-
 import android.os.Bundle
+import android.util.Log
+
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 
@@ -28,19 +32,8 @@ import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest
 import com.google.android.libraries.places.api.net.PlacesClient
-
-import com.google.android.libraries.places.api.net.FetchPlaceRequest
-import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
-import com.google.android.libraries.places.api.model.AutocompletePrediction
-import com.google.android.libraries.places.api.net.PlacesStatusCodes
-
-
-// imports for error handling
-import com.google.android.gms.common.api.ApiException
-import com.google.android.gms.common.api.CommonStatusCodes
-import com.google.android.gms.tasks.Task
-import android.util.Log
-import android.widget.Toast
+import com.google.android.libraries.places.api.net.SearchByTextRequest
+import com.google.android.libraries.places.api.model.RectangularBounds
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -56,23 +49,40 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         setContentView(R.layout.activity_main)
 
         // start places API
-        if (!Places.isInitialized()) {
-            Places.initialize(applicationContext, getString(R.string.google_maps_key))
+
+        val apiKey = BuildConfig.PLACES_API_KEY
+
+        if (apiKey.isEmpty() || apiKey == "DEFAULT_API_KEY") {
+            Log.e("places test", "No api key")
+            finish()
+            return
         }
+
+        if (!Places.isInitialized()) {
+            Places.initializeWithNewPlacesApiEnabled(applicationContext, apiKey)
+        }
+
         placesClient = Places.createClient(this)
 
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        // what does this do
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
+        // what does this do
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
 
+        // what is this section
         val searchView = findViewById<SearchView>(R.id.search_bar)
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?) : Boolean {
                 query?.let {
-                    searchForLocation(it)
+                    mFusedLocationProviderClient.lastLocation.addOnSuccessListener { location: Location? ->
+                        location?.let {
+                            val currentLatLng = LatLng(it.latitude, it.longitude)
+                            searchForLocation(query, currentLatLng)
+                        }
+                    }
                 }
                 return false
             }
@@ -83,31 +93,40 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         })
     }
 
-    private fun searchForLocation(query: String) {
-        val request = FindCurrentPlaceRequest.newInstance(listOf(Place.Field.NAME, Place.Field.LAT_LNG))
-        val placeResult = placesClient.findCurrentPlace(request)
-        placeResult.addOnCompleteListener { task ->
-        if (task.isSuccessful) {
-            val response = task.result
-            for (placeLikelihood in response?.placeLikelihoods ?: emptyList()) {
-                val place = placeLikelihood.place
-                // Give each place a marker
-                mMap.addMarker(MarkerOptions().position(place.latLng!!).title(place.name))
-            }
-            // Camera goes to first place
-            response?.placeLikelihoods?.firstOrNull()?.place?.latLng?.let {
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 15f))
-            }
-        } else {
-            // Handle error
-            Log.e("MainActivity", "Place not found: 4{task.exception?.message}")
-            when (task.exception?.message) {
-                "API key is invalid" -> Log.e("MainActivity", "Invalid API Key")
-                "API quota exceeded" -> Log.e("MainActivity", "API Quota Exceeded")
-                else -> Log.e("MainActivity", "Unknown error occured")
+    private fun searchForLocation(query: String, currentLatLng: LatLng) {
+
+    val placeFields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG)
+
+    val request = SearchByTextRequest.builder(query, placeFields)
+        .setLocationRestriction(
+            RectangularBounds.newInstance(
+                LatLng(currentLatLng.latitude - 0.1, currentLatLng.longitude - 0.1),
+                LatLng(currentLatLng.latitude + 0.1, currentLatLng.longitude + 0.1)
+            )
+        )
+        .build();
+
+    placesClient.searchByText(request)
+        .addOnSuccessListener { response ->
+
+        // Clear old map markers
+        mMap.clear()
+
+        for (place in response.places) {
+            Log.i("MainActivity", place.id ?: "")
+            Log.i("MainActivity", place.name ?: "")
+
+            val latLng = place.latLng
+            if (latLng != null) {
+
+                // if place found, add marker, move camera to place
+                mMap.addMarker(MarkerOptions().position(latLng).title(place.name))
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
             }
         }
-        }
+    }.addOnFailureListener { exception ->
+                Log.e("MainActivity", "Text search failed: ${exception.message}")
+            }
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -145,7 +164,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 // all good to go
                 onMapReady(mMap)
             } else {
-                // not way jose, send 'em to the Peg
+                // no way jose, send 'em to the Peg
                 val winnipegLocation = LatLng(49.8951, -97.1384)
                 mMap.addMarker(MarkerOptions().position(winnipegLocation).title("Somewhere over Winnipeg"))
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(winnipegLocation, 15f))
