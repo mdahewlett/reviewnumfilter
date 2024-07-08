@@ -34,7 +34,9 @@ import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.android.libraries.places.api.net.SearchByTextRequest
 import com.google.android.libraries.places.api.model.RectangularBounds
 
+// imports for filter by reviews
 import android.widget.Button
+import android.widget.TextView
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -47,6 +49,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var reviewCountButton: Button
     private lateinit var lastQuery: String
     private lateinit var lastLatLng: LatLng
+    private lateinit var highestReviewsTextView: TextView
+    private lateinit var lowestReviewsTextView: TextView
+    private lateinit var meanReviewsTextView: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,6 +83,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // what is this section
         searchBar = findViewById(R.id.search_bar)
         reviewCountButton = findViewById(R.id.review_count_button)
+        highestReviewsTextView = findViewById(R.id.highest_reviews)
+        lowestReviewsTextView = findViewById(R.id.lowest_reviews)
+        meanReviewsTextView = findViewById(R.id.mean_reviews)
+        
+        // what is this section
         searchBar.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?) : Boolean {
                 query?.let {
@@ -104,7 +114,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun searchForLocation(query: String, currentLatLng: LatLng, filterByReviews: Boolean) {
 
-    val placeFields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG)
+    val placeFields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG, Place.Field.USER_RATINGS_TOTAL)
 
     val request = SearchByTextRequest.builder(query, placeFields)
         .setLocationRestriction(
@@ -128,15 +138,27 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             results
         }
 
+        val reviewList = results.mapNotNull { it.userRatingsTotal }
+        if (reviewList.isNotEmpty()) {
+            val highestReviews = reviewList.maxOrNull() ?: 0
+            val lowestReviews = reviewList.minOrNull() ?: 0
+            val meanReviews = reviewList.average().toInt()
+
+            highestReviewsTextView.text = "Highest Reviews: $highestReviews"
+            lowestReviewsTextView.text = "Lowest Reviews: $lowestReviews"
+            meanReviewsTextView.text = "Mean Reviews: $meanReviews"
+        }
+
         for (place in filteredResults) {
             Log.i("MainActivity", place.id ?: "")
             Log.i("MainActivity", place.name ?: "")
 
             val latLng = place.latLng
             if (latLng != null) {
-
+                val reviews = place.userRatingsTotal ?: 0
+                val snippet = "Reviews: $reviews"
                 // if place found, add marker, move camera to place
-                mMap.addMarker(MarkerOptions().position(latLng).title(place.name))
+                mMap.addMarker(MarkerOptions().position(latLng).title(place.name).snippet(snippet))
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
             }
         }
@@ -147,6 +169,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
+
+        // Enable zoom controls
+        mMap.uiSettings.isZoomControlsEnabled = true
 
         // Check for location permission
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
