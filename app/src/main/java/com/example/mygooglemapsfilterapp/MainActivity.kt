@@ -151,7 +151,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             // got location, apparently can be null sometimes, but not common
             location?.let {
                 val currentLocation = LatLng(it.latitude, it.longitude)
-                mMap.addMarker(MarkerOptions().position(currentLocation).title("You are here"))
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f))
             }
         }
