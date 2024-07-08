@@ -27,13 +27,14 @@ import com.google.android.gms.maps.model.MarkerOptions
 
 // imports for searching for things
 import android.widget.SearchView
-
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.android.libraries.places.api.net.SearchByTextRequest
 import com.google.android.libraries.places.api.model.RectangularBounds
+
+import android.widget.Button
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -43,13 +44,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var searchBar: SearchView
     private lateinit var placesClient: PlacesClient
+    private lateinit var reviewCountButton: Button
+    private lateinit var lastQuery: String
+    private lateinit var lastLatLng: LatLng
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         // start places API
-
         val apiKey = BuildConfig.PLACES_API_KEY
 
         if (apiKey.isEmpty() || apiKey == "DEFAULT_API_KEY") {
@@ -73,14 +76,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
 
         // what is this section
-        val searchView = findViewById<SearchView>(R.id.search_bar)
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+        searchBar = findViewById(R.id.search_bar)
+        reviewCountButton = findViewById(R.id.review_count_button)
+        searchBar.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?) : Boolean {
                 query?.let {
                     mFusedLocationProviderClient.lastLocation.addOnSuccessListener { location: Location? ->
                         location?.let {
-                            val currentLatLng = LatLng(it.latitude, it.longitude)
-                            searchForLocation(query, currentLatLng)
+                            lastLatLng = LatLng(it.latitude, it.longitude)
+                            lastQuery = query
+                            searchForLocation(query, lastLatLng, false)
                         }
                     }
                 }
@@ -91,9 +96,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 return false
             }
         })
+
+        reviewCountButton.setOnClickListener {
+            searchForLocation(lastQuery, lastLatLng, true)
+        }
     }
 
-    private fun searchForLocation(query: String, currentLatLng: LatLng) {
+    private fun searchForLocation(query: String, currentLatLng: LatLng, filterByReviews: Boolean) {
 
     val placeFields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG)
 
@@ -112,7 +121,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Clear old map markers
         mMap.clear()
 
-        for (place in response.places) {
+        val results = response.places
+        val filteredResults = if (filterByReviews) {
+            results.sortedByDescending { it.userRatingsTotal ?: 0 }.take(10)
+        } else {
+            results
+        }
+
+        for (place in filteredResults) {
             Log.i("MainActivity", place.id ?: "")
             Log.i("MainActivity", place.name ?: "")
 
