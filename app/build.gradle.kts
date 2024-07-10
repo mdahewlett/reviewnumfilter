@@ -16,12 +16,12 @@ val mapsApiKey: String = localProperties["PLACES_API_KEY"] as String
 
 android {
     namespace = "com.example.mygooglemapsfilterapp"
-    compileSdk = 34
+    compileSdk = 34 // should match targetSdk
 
     defaultConfig {
         applicationId = "com.example.mygooglemapsfilterapp"
         minSdk = 21
-        targetSdk = 34
+        targetSdk = 34 // highest version tested app on
         versionCode = 1
         versionName = "1.0"
 
@@ -30,26 +30,29 @@ android {
         // making the API available elsewhere as a string resource
         // e.g. kotlin getString(R.string.google_maps_key)
         // e.g. xml "@string/google_maps_key"
-        resValue("string", "google_maps_key", mapsApiKey) // 
+        resValue("string", "google_maps_key", mapsApiKey)
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            isMinifyEnabled = false // when true, shortens var names and removes unused lines
+            proguardFiles( // makes your code harder to reverse engineer
+                getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
-    compileOptions {
+
+    compileOptions { // what versions of JAVA the code should be compatible with
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-    kotlinOptions {
+
+    kotlinOptions { // also making code compatible with JAVA
         jvmTarget = "1.8"
     }
 
     buildFeatures {
-        buildConfig = true
-        viewBinding = true
+        buildConfig = true // makes the BuildConfig class available
+        viewBinding = true // makes class for each xml layout file, access views w/o findVyewById
     }
 }
 

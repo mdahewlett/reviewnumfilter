@@ -29,6 +29,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 
+import com.example.mygooglemapsfilterapp.databinding.ActivityMainBinding
+
 // Google Location Services
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -61,6 +63,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // Declarations //
       // Only available in the class, initialized later, done for readability or b/c required to declare and initialize separately
       // What moves has MainActivity been working on in practice that we'll see on court today Tom?
+    // System
+    private lateinit var binding: ActivityMainBinding
 
     // Map
     private lateinit var mMap: GoogleMap
@@ -87,7 +91,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         super.onCreate(savedInstanceState)
 
         // Look here for the css/html equivalent of how the app will look to the user
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         // Connect to Google Places platform //
            /* It looks like they're going to be getting some on court help
@@ -130,11 +135,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Initializing more fragments
          // These fragment types are explicit in the xml <fragment name/>
          // Wow Brad, they're really summoning everything now
-        searchBar = findViewById(R.id.search_bar)
-        reviewCountButton = findViewById(R.id.review_count_button)
-        highestReviewsTextView = findViewById(R.id.highest_reviews)
-        lowestReviewsTextView = findViewById(R.id.lowest_reviews)
-        meanReviewsTextView = findViewById(R.id.mean_reviews)
+        searchBar = binding.searchBar
+        reviewCountButton = binding.reviewCountButton
+        highestReviewsTextView = binding.highestReviews
+        lowestReviewsTextView = binding.lowestReviews
+        meanReviewsTextView = binding.meanReviews
         
         // SearchBar logic //
            // They're telling one of their key fragments what to moves to look for and how to respond
