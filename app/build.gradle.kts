@@ -4,6 +4,7 @@ plugins {
     id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
 }
 
+// accessing the API key from local properties
 import java.util.Properties
 
 val localProperties = Properties().apply {
@@ -11,7 +12,6 @@ val localProperties = Properties().apply {
 }
 
 val mapsApiKey: String = localProperties["PLACES_API_KEY"] as String
-// why need to load in local properties through build.gradle.kts?
 
 
 android {
@@ -27,7 +27,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        resValue("string", "google_maps_key", mapsApiKey) // to not load api to github
+        // making the API available elsewhere as a string resource
+        // e.g. kotlin getString(R.string.google_maps_key)
+        // e.g. xml "@string/google_maps_key"
+        resValue("string", "google_maps_key", mapsApiKey) // 
     }
 
     buildTypes {
