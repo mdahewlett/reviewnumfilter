@@ -2,12 +2,14 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Permissions -->
+    <!-- Tells Android what permissions the app needs -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
-
+    <!-- Tells Android app basics -->
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -15,17 +17,28 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
+        <!-- Google Maps API key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_key"/> 
+       
+        <!-- Main Activity -->
         <activity android:name=".MainActivity"
                     android:exported="true">
+
+            <!-- filter lets other apps use this apps functionality if those apps can't -->
+            <!-- Like when I want to view a PDF but the app I'm in doesn't have a viewer -->
+            <!-- I'll be asked what app I want to use if many have that activity -->
             <intent-filter>
+                <!-- Means this activity will be the one launched when clicked on -->
                 <action android:name="android.intent.action.MAIN" />
+                <!-- Launcher makes app appear in home screen and app drawer -->
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- filter lets call intent implicitly -->
+            
         </activity>
+
     </application>
 
 </manifest>
