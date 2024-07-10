@@ -7,11 +7,16 @@ plugins {
 // accessing the API key from local properties
 import java.util.Properties
 
-val localProperties = Properties().apply {
-    load(rootProject.file("local.properties").inputStream())
+val localPropertiesFile = rootProject.file("local.properties")
+val properties = Properties().apply {
+    if (localPropertiesFile.exists()) {
+        load(localPropertiesFile.inputStream())
+    } else {
+        load(rootProject.file("secrets.properties").inputStream())
+    }
 }
 
-val mapsApiKey: String = localProperties["PLACES_API_KEY"] as String
+val mapsApiKey: String = properties["PLACES_API_KEY"] as String
 
 
 android {
@@ -56,14 +61,17 @@ android {
     }
 }
 
-dependencies {
+dependencies { // libraries and tools, bits of these will be imported into other files
+    // standards
     implementation(platform("org.jetbrains.kotlin:kotlin-stdlib:1.9.0"))
     implementation("androidx.appcompat:appcompat:1.3.1")
 
+    // features
     implementation("com.google.android.gms:play-services-location:18.0.0")
     implementation("com.google.android.gms:play-services-maps:18.0.2")
     implementation("com.google.android.libraries.places:places:3.5.0")
 
+    // testing
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
     testImplementation("junit:junit:4.13.2")
@@ -71,16 +79,7 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.4.0")
 }
 
-tasks.withType<Test> {
+tasks.withType<Test> { // tells all test tasks to use JUnit
     useJUnitPlatform()
-}
-
-secrets {
-    propertiesFileName = "secrets.properties"
-
-    defaultPropertiesFileName = "local.defaults.properties"
-
-    ignoreList.add("keyToIgnore") 
-    ignoreList.add("sdk.*")       
 }
         
