@@ -1,4 +1,5 @@
-<!-- this is where you say what components are in the app -->
+<!-- Configuration file -->
+<!-- The parent, telling the kid what parts of the toy they can bring to school  -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -36,7 +37,7 @@
                 <!-- Launcher makes app appear in home screen and app drawer -->
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            
+
         </activity>
 
     </application>

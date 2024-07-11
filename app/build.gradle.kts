@@ -1,3 +1,8 @@
+/* 
+* Build file, along with settings/gradle.kts
+* The toy maker or independent contributor, building the app 
+*/
+
 plugins {
     id("com.android.application")
     kotlin("android")
@@ -61,7 +66,8 @@ android {
     }
 }
 
-dependencies { // libraries and tools, bits of these will be imported into other files
+// aka libraries, bits of these will be imported into other files
+dependencies { 
     // standards
     implementation(platform("org.jetbrains.kotlin:kotlin-stdlib:1.9.0"))
     implementation("androidx.appcompat:appcompat:1.3.1")
