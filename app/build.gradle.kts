@@ -1,6 +1,6 @@
 /* 
-* Build file, along with settings/gradle.kts
-* The toy maker or independent contributor, building the app 
+* Build file, along with settings.gradle and properties.gradle
+* The jr toy maker or independent contributor, building the app 
 */
 
 plugins {

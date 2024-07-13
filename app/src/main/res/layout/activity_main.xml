@@ -16,7 +16,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:queryHint="Seach for places" />
+        android:queryHint="Seach for places"
+        android:iconifiedByDefault="false"/>
     
     <Button
         android:id="@+id/review_count_button"

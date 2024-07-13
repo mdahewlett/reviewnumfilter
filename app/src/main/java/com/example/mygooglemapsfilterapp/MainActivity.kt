@@ -19,6 +19,8 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
+import android.view.inputmethod.InputMethodManager
+import android.content.Context
 
 // Android components
 import android.widget.Button
@@ -70,6 +72,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var mMap: GoogleMap
     private lateinit var mFusedLocationProviderClient: FusedLocationProviderClient
     private val LOCATION_PERMISSION_REQUEST_CODE = 1
+    private lateinit var mapFragment: SupportMapFragment
 
     // Search
     private lateinit var searchBar: SearchView
@@ -121,7 +124,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Initializing the map fragment from XML
            // Tells it that its a map fragment, since in xml it's a generic <fragment/>
            // They're preparing an item that is going to receive Google Places power
-        val mapFragment = supportFragmentManager
+        mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         
         // Initializes the google map object inside the map fragment
@@ -135,7 +138,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Initializing more fragments
          // These fragment types are explicit in the xml <fragment name/>
          // Wow Brad, they're really summoning everything now
-        searchBar = binding.searchBar
+        searchBar = findViewById(R.id.search_bar)
         reviewCountButton = binding.reviewCountButton
         highestReviewsTextView = binding.highestReviews
         lowestReviewsTextView = binding.lowestReviews
@@ -171,11 +174,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             // If they change the query text
             override fun onQueryTextChange(newText: String?): Boolean {
                 
-                // Don't do anything
+                // Clear markers when they search bar is empty
+                if (newText.isNullOrEmpty()) {                    
+                    // mMap.clear()
+                }
 
                 return false // But don't stop listening and responding
             }
         })
+
+        // Clear markers and hide keyboard when the search bar is closed
+        searchBar.setOnCloseListener {
+            clearSearchView()
+            true // Return false to let the default behavior proceed
+        }
 
         // If the review count button is clicked,
         reviewCountButton.setOnClickListener {
@@ -256,6 +268,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f))
             }
         }
+    }
+
+    private fun clearSearchView() {
+        // Clear text
+        searchBar.setQuery("", false)
+        searchBar.clearFocus()
+
+        // Clear markers
+        mMap.clear()
+
+        // hide keyboard
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(searchBar.windowToken, 0)
+
+        // change focus to map
+        mapFragment.view?.requestFocus()
+
     }
 
     // Add markers for queries //
