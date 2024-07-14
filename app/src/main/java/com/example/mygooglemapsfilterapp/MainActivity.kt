@@ -8,6 +8,10 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.view.inputmethod.InputMethodManager
+import android.view.Menu
+import android.view.MenuItem
+
+
 import android.content.Context
 
 // Android components
@@ -98,7 +102,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
-        searchView = binding.searchView
         reviewCountButton = binding.reviewCountButton
         reviewCountSummary = binding.reviewCountSummary
         highestReviewsTextView = binding.highestReviews
@@ -106,9 +109,34 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         
         reviewCountSummary.visibility = View.GONE
 
+        // Review filter logic
+        reviewCountButton.setOnClickListener {
+            searchForLocation(lastQuery, lastLatLng, true)
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        val searchItem = menu?.findItem(R.id.action_search)
+
+        if (searchItem == null) {
+        Log.e("MainActivity", "Search item is null")
+        return true
+        }
+
+        val searchView = searchItem.actionView as? SearchView
+
+        if (searchView == null) {
+            Log.e("MainActivity", "SearchView is null")
+            return true
+        }
+
+        Log.d("MainActivity", "SearchView initialized")
+
         // Search view logic
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?) : Boolean {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                Log.d("MainActivity", "Query submitted: $query")
                 query?.let { 
                     mFusedLocationProviderClient.lastLocation.addOnSuccessListener { location: Location? ->
                         location?.let {
@@ -122,7 +150,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }
 
             override fun onQueryTextChange(newText: String?): Boolean {
-                if (newText.isNullOrEmpty()) {                    
+                if (newText.isNullOrEmpty()) {     
+                    Log.d("MainActivity", "Query text cleared")               
                     mMap.clear()
                     reviewCountSummary.visibility = View.GONE
                 }
@@ -130,11 +159,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 return false
             }
         })
-
-        // Review filter logic
-        reviewCountButton.setOnClickListener {
-            searchForLocation(lastQuery, lastLatLng, true)
-        }
+        return true
     }
 
     // Request location permission
