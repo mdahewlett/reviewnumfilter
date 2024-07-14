@@ -66,7 +66,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var reviewCountButton: Button
     private lateinit var reviewCountSummary: LinearLayout
     private lateinit var highestReviewsTextView: TextView
-    private lateinit var lowestReviewsTextView: TextView
     private lateinit var meanReviewsTextView: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -103,7 +102,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         reviewCountButton = binding.reviewCountButton
         reviewCountSummary = binding.reviewCountSummary
         highestReviewsTextView = binding.highestReviews
-        lowestReviewsTextView = binding.lowestReviews
         meanReviewsTextView = binding.meanReviews
         
         reviewCountSummary.visibility = View.GONE
@@ -234,12 +232,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                 if (reviewList.isNotEmpty()) {
                     val highestReviews = reviewList.maxOrNull() ?: 0
-                    val lowestReviews = reviewList.minOrNull() ?: 0
                     val meanReviews = reviewList.average().toInt()
 
                     highestReviewsTextView.text = "Highest Reviews: $highestReviews"
-                    lowestReviewsTextView.text = "Lowest Reviews: $lowestReviews"
                     meanReviewsTextView.text = "Mean Reviews: $meanReviews"
+                
+                    reviewCountSummary.visibility = View.VISIBLE
                 }
 
                 // Add map markers
