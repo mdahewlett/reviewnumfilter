@@ -6,10 +6,13 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.content.Context
 
 // Android components
+import android.widget.RelativeLayout
+import android.widget.LinearLayout
 import android.widget.Button
 import android.widget.SearchView
 import android.widget.TextView
@@ -17,6 +20,7 @@ import android.widget.TextView
 // Androidx libraries
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
 // Google Location Services
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -60,6 +64,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Reviews
     private lateinit var reviewCountButton: Button
+    private lateinit var reviewCountSummary: LinearLayout
     private lateinit var highestReviewsTextView: TextView
     private lateinit var lowestReviewsTextView: TextView
     private lateinit var meanReviewsTextView: TextView
@@ -94,12 +99,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
-        searchView = findViewById(R.id.search_view)
+        searchView = binding.searchView
         reviewCountButton = binding.reviewCountButton
+        reviewCountSummary = binding.reviewCountSummary
         highestReviewsTextView = binding.highestReviews
         lowestReviewsTextView = binding.lowestReviews
         meanReviewsTextView = binding.meanReviews
         
+        reviewCountSummary.visibility = View.GONE
+
         // Search view logic
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?) : Boolean {
@@ -118,6 +126,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             override fun onQueryTextChange(newText: String?): Boolean {
                 if (newText.isNullOrEmpty()) {                    
                     mMap.clear()
+                    reviewCountSummary.visibility = View.GONE
                 }
 
                 return false
@@ -157,7 +166,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
             ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
         
-                // request permission
+                // Request permission
                 ActivityCompat.requestPermissions(this,
                     arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 
                     LOCATION_PERMISSION_REQUEST_CODE)
@@ -178,6 +187,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f))
             }
         }
+
+        // Move location button to bottom right
+        val locationButtonParent = (mapFragment.view?.findViewById<View>("1".toInt())?.parent as View)
+        
+        locationButtonParent.background = ContextCompat.getDrawable(this, R.drawable.border) // debug
+
+        val locationButton = locationButtonParent.findViewById<View>("2".toInt())
+        val rlp = locationButton.layoutParams as RelativeLayout.LayoutParams
+        rlp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE)
+        rlp.addRule(RelativeLayout.ALIGN_PARENT_END, RelativeLayout.TRUE)
+        rlp.setMargins(0, 0, 16, 100) // Adjust margins as needed
+        locationButton.layoutParams = rlp
     }
 
     // Search query logic
