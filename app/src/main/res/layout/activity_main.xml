@@ -16,6 +16,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
+        android:layout_margin="10dp"
         android:queryHint="Seach for places"
         android:iconifiedByDefault="false"
         android:background="@drawable/rounded_corners"/>
@@ -26,7 +27,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/search_view"
         android:layout_alignParentStart="true"
-        android:layout_marginTop="10dp"
+        android:layout_marginLeft="10dp"
         android:text="Review Count"
         android:background="@drawable/rounded_corners"/>
 
