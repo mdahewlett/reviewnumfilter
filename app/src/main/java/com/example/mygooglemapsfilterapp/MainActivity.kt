@@ -32,6 +32,7 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.MarkerOptions
 
 // Places API
@@ -205,6 +206,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Search query logic
     private fun searchForLocation(query: String, currentLatLng: LatLng, filterByReviews: Boolean) {
+        val bounds = LatLngBounds.builder()
+
         // State info we want on each place
         val placeFields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG, Place.Field.USER_RATINGS_TOTAL)
 
@@ -258,9 +261,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         val snippet = "Reviews: $reviews"
 
                         mMap.addMarker(MarkerOptions().position(latLng).title(place.name).snippet(snippet))
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
+                        bounds.include(latLng)
                     }
                 }
+                mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds.build(), 100))
 
             }.addOnFailureListener { exception ->
                 Log.e("MainActivity", "Text search failed: ${exception.message}")
