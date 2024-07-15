@@ -6,12 +6,10 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
-import android.view.View
-import android.view.inputmethod.InputMethodManager
 import android.view.Menu
 import android.view.MenuItem
-
-
+import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.content.Context
 
 // Android components
@@ -73,7 +71,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var meanReviewsTextView: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
 
         // Typesafety
@@ -82,7 +79,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Connect to Google Places platform
         val apiKey = BuildConfig.PLACES_API_KEY
-
         if (apiKey.isEmpty() || apiKey == "DEFAULT_API_KEY") {
             Log.e("places test", "No api key")
             finish() // closes the activity
@@ -98,20 +94,37 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Get device location
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
         
-        // Initialize var
+        // Initialize map fragment
         mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
+        // Initialize view
         reviewCountButton = binding.reviewCountButton
         reviewCountSummary = binding.reviewCountSummary
         highestReviewsTextView = binding.highestReviews
         meanReviewsTextView = binding.meanReviews
         
+        // Show/hide elements
         reviewCountSummary.visibility = View.GONE
 
         // Review filter logic
         reviewCountButton.setOnClickListener {
             searchForLocation(lastQuery, lastLatLng, true)
+        }
+
+        // Check for location permission
+        if(checkLocationPermission()) {
+            mapFragment.getMapAsync(this)
+        }
+    }
+
+    private fun checkLocationPermission(): Boolean {
+        return if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // Request permission
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), LOCATION_PERMISSION_REQUEST_CODE)
+            false
+        } else {
+            true
         }
     }
 
@@ -122,6 +135,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (searchItem == null) {
         Log.e("MainActivity", "Search item is null")
         return true
+        } else {
+            Log.d("MainActivity", "Search item found: ${searchItem.title}")
+        }
+
+        val actionView = searchItem.actionView
+        if (actionView == null) {
+            Log.e("MainActivity", "ActionView is null")
+        } else {
+            Log.d("MainActivity", "ActionView class: ${actionView::class.java.name}")
         }
 
         val searchView = searchItem.actionView as? SearchView
@@ -129,20 +151,26 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (searchView == null) {
             Log.e("MainActivity", "SearchView is null")
             return true
+        } else {
+            Log.d("MainActivity", "SearchView found")
         }
 
         Log.d("MainActivity", "SearchView initialized")
+
+        searchItem.expandActionView()
 
         // Search view logic
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 Log.d("MainActivity", "Query submitted: $query")
                 query?.let { 
-                    mFusedLocationProviderClient.lastLocation.addOnSuccessListener { location: Location? ->
-                        location?.let {
-                            lastLatLng = LatLng(it.latitude, it.longitude)
-                            lastQuery = query
-                            searchForLocation(query, lastLatLng, false)
+                    if (checkLocationPermission()) {
+                        mFusedLocationProviderClient.lastLocation.addOnSuccessListener { location: Location? ->
+                            location?.let {
+                                lastLatLng = LatLng(it.latitude, it.longitude)
+                                lastQuery = query
+                                searchForLocation(query, lastLatLng, false)
+                            }
                         }
                     }
                 }
@@ -155,27 +183,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     mMap.clear()
                     reviewCountSummary.visibility = View.GONE
                 }
-
                 return false
             }
         })
-        return true
-    }
 
-    // Request location permission
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        
-        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                onMapReady(mMap)
-            } else {
-                val winnipegLocation = LatLng(49.8951, -97.1384)
-                mMap.addMarker(MarkerOptions().position(winnipegLocation).title("Somewhere over Winnipeg"))
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(winnipegLocation, 15f))
-            }
+        searchView.setOnSearchClickListener {
+            Log.d("MainActivity", "SearchView clicked")
         }
+
+        searchView.setOnCloseListener {
+            Log.d("MainActivity", "SearchView closed")
+            false
+        }
+
+        return true
     }
 
     // Load base map
@@ -185,35 +206,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Enable zoom controls
         mMap.uiSettings.isZoomControlsEnabled = true
 
-        // If missing existing location permission
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-        
-                // Request permission
-                ActivityCompat.requestPermissions(this,
-                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION), 
-                    LOCATION_PERMISSION_REQUEST_CODE)
-                
-                // Don't do more without permission
-                return
-
-            }
-
         // Show dot of their location on map
         mMap.isMyLocationEnabled = true
 
-        // Request last location, move camera there
-        mFusedLocationProviderClient.lastLocation
-            .addOnSuccessListener { location: Location? -> 
-            location?.let {
-                val currentLocation = LatLng(it.latitude, it.longitude)
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f))
+        if (checkLocationPermission()) {
+            // Request last location, move camera there
+            mFusedLocationProviderClient.lastLocation
+                .addOnSuccessListener { location: Location? -> 
+                location?.let {
+                    val currentLocation = LatLng(it.latitude, it.longitude)
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f))
+                }
             }
         }
 
         // Move location button to bottom right
         val locationButtonParent = (mapFragment.view?.findViewById<View>("1".toInt())?.parent as View)
-        
         locationButtonParent.background = ContextCompat.getDrawable(this, R.drawable.border) // debug
 
         val locationButton = locationButtonParent.findViewById<View>("2".toInt())
@@ -222,6 +230,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         rlp.addRule(RelativeLayout.ALIGN_PARENT_END, RelativeLayout.TRUE)
         rlp.setMargins(0, 0, 16, 100) // Adjust margins as needed
         locationButton.layoutParams = rlp
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                mapFragment.getMapAsync(this)
+            } else {
+                val winnipegLocation = LatLng(49.8951, -97.1384)
+                mMap.addMarker(MarkerOptions().position(winnipegLocation).title("Somewhere over Winnipeg"))
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(winnipegLocation, 15f))
+            }
+        }
     }
 
     // Search query logic

@@ -70,7 +70,8 @@ android {
 dependencies { 
     // standards
     implementation(platform("org.jetbrains.kotlin:kotlin-stdlib:1.9.0"))
-    implementation("androidx.appcompat:appcompat:1.3.1")
+    implementation("androidx.appcompat:appcompat:1.4.0")
+    implementation("androidx.core:core-ktx:1.6.0")
 
     // features
     implementation("com.google.android.gms:play-services-location:18.0.0")
