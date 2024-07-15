@@ -94,16 +94,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Get device location
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
         
-        // Initialize var
+        // Initialize map fragment
         mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
+        // Initialize views
         searchView = binding.searchView
         reviewCountButton = binding.reviewCountButton
         reviewCountSummary = binding.reviewCountSummary
         highestReviewsTextView = binding.highestReviews
         meanReviewsTextView = binding.meanReviews
         
+        // Show/hide elements
+        reviewCountButton.visibility = View.GONE
         reviewCountSummary.visibility = View.GONE
 
         // Search view logic
@@ -124,6 +127,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             override fun onQueryTextChange(newText: String?): Boolean {
                 if (newText.isNullOrEmpty()) {                    
                     mMap.clear()
+                    reviewCountButton.visibility = View.GONE
                     reviewCountSummary.visibility = View.GONE
                 }
 
@@ -237,6 +241,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     highestReviewsTextView.text = "Highest Reviews: $highestReviews"
                     meanReviewsTextView.text = "Mean Reviews: $meanReviews"
                 
+                    reviewCountButton.visibility = View.VISIBLE
                     reviewCountSummary.visibility = View.VISIBLE
                 }
 
