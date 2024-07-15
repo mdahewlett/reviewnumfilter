@@ -206,19 +206,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Search query logic
     private fun searchForLocation(query: String, currentLatLng: LatLng, filterByReviews: Boolean) {
-        val bounds = LatLngBounds.builder()
-
         // State info we want on each place
         val placeFields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG, Place.Field.USER_RATINGS_TOTAL)
 
+        // Get the map's current bounds
+        val bounds = mMap.projection.visibleRegion.latLngBounds
+
         // Format request for the API
         val request = SearchByTextRequest.builder(query, placeFields)
-            .setLocationRestriction(
-                RectangularBounds.newInstance(
-                    LatLng(currentLatLng.latitude - 0.1, currentLatLng.longitude - 0.1),
-                    LatLng(currentLatLng.latitude + 0.1, currentLatLng.longitude + 0.1)
-                )
-            )
+            .setLocationRestriction(RectangularBounds.newInstance(bounds))
             .build();
 
         // Send request
@@ -248,6 +244,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     reviewCountSummary.visibility = View.VISIBLE
                 }
 
+                // Initialize bounds
+                val boundsBuilder = LatLngBounds.builder()
+
                 // Add map markers
                 for (place in filteredResults) {
 
@@ -261,10 +260,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         val snippet = "Reviews: $reviews"
 
                         mMap.addMarker(MarkerOptions().position(latLng).title(place.name).snippet(snippet))
-                        bounds.include(latLng)
+                        boundsBuilder.include(latLng)
                     }
                 }
-                mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds.build(), 100))
+
+                // Fit map to the bounds
+                mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100))
 
             }.addOnFailureListener { exception ->
                 Log.e("MainActivity", "Text search failed: ${exception.message}")
