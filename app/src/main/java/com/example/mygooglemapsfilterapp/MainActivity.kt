@@ -7,6 +7,7 @@ import android.location.Location
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.view.LayoutInflater
 import android.view.inputmethod.InputMethodManager
 import android.content.Context
 
@@ -34,6 +35,8 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 
 // Places API
 import com.google.android.libraries.places.api.Places
@@ -42,6 +45,12 @@ import com.google.android.libraries.places.api.model.RectangularBounds
 import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.android.libraries.places.api.net.SearchByTextRequest
+
+// Custom marker
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+
 
 // Misc
 import com.example.mygooglemapsfilterapp.databinding.ActivityMainBinding
@@ -114,11 +123,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?) : Boolean {
                 query?.let { 
-                    mFusedLocationProviderClient.lastLocation.addOnSuccessListener { location: Location? ->
-                        location?.let {
-                            lastLatLng = LatLng(it.latitude, it.longitude)
-                            lastQuery = query
-                            searchForLocation(query, lastLatLng, false)
+                    if (checkLocationPermission()) {
+                        mFusedLocationProviderClient.lastLocation.addOnSuccessListener { location: Location? ->
+                            location?.let {
+                                lastLatLng = LatLng(it.latitude, it.longitude)
+                                lastQuery = query
+                                searchForLocation(query, lastLatLng, false)
+                            }
                         }
                     }
                 }
@@ -138,7 +149,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Review filter logic
         reviewCountButton.setOnClickListener {
-            searchForLocation(lastQuery, lastLatLng, true)
+            searchForLocation(lastQuery, lastLatLng, true) // where issue stemming from
         }
     }
 
@@ -204,6 +215,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         locationButton.layoutParams = rlp
     }
 
+    // Location permission logic
+    private fun checkLocationPermission(): Boolean {
+            return if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                // Request permission
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), LOCATION_PERMISSION_REQUEST_CODE)
+                false
+            } else {
+                true
+            }
+        }
+
     // Search query logic
     private fun searchForLocation(query: String, currentLatLng: LatLng, filterByReviews: Boolean) {
         // State info we want on each place
@@ -257,9 +279,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     val latLng = place.latLng
                     if (latLng != null) {
                         val reviews = place.userRatingsTotal ?: 0
-                        val snippet = "Reviews: $reviews"
+                        val customerMarker = createCustomMarker(this, reviews)
 
-                        mMap.addMarker(MarkerOptions().position(latLng).title(place.name).snippet(snippet))
+                        mMap.addMarker(MarkerOptions().position(latLng).title(place.name).icon(customerMarker))
                         boundsBuilder.include(latLng)
                     }
                 }
@@ -270,6 +292,29 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }.addOnFailureListener { exception ->
                 Log.e("MainActivity", "Text search failed: ${exception.message}")
             }
+    }
+
+    // Custom marker logic
+    private fun createCustomMarker(context: Context, reviewCount: Int): BitmapDescriptor {
+        // create marker view
+        val markerView = (context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater)
+            .inflate(R.layout.customer_marker_layout, null)
+        
+        // add review count
+        val reviewCountTextView = markerView.findViewById<TextView>(R.id.review_count)
+        reviewCountTextView.text = reviewCount.toString()
+
+        // set arbitrary size and location
+        markerView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+        markerView.layout(0, 0, markerView.measuredWidth, markerView.measuredHeight)
+
+        // create container with right dimensions, draw onto 
+        val bitmap = Bitmap.createBitmap(markerView.measuredWidth, markerView.measuredHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        markerView.draw(canvas)
+
+        // package as icon for google maps
+        return BitmapDescriptorFactory.fromBitmap(bitmap)
     }
 
 }
