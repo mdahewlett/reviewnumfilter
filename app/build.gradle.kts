@@ -76,6 +76,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:18.0.0")
     implementation("com.google.android.gms:play-services-maps:18.0.2")
     implementation("com.google.android.libraries.places:places:3.5.0")
+    implementation("com.github.Jay-Goo:RangeSeekBar:v3.0.0")
 
     // testing
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")

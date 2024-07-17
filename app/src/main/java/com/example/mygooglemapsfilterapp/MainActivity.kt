@@ -51,9 +51,12 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 
-
 // Misc
 import com.example.mygooglemapsfilterapp.databinding.ActivityMainBinding
+
+// Filter
+import com.jaygoo.widget.RangeSeekBar
+import kotlin.math.ceil
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -128,7 +131,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                             location?.let {
                                 lastLatLng = LatLng(it.latitude, it.longitude)
                                 lastQuery = query
-                                searchForLocation(query, lastLatLng, false)
+                                searchForLocation(query, lastLatLng)
                             }
                         }
                     }
@@ -147,10 +150,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         })
 
-        // Review filter logic
-        reviewCountButton.setOnClickListener {
-            searchForLocation(lastQuery, lastLatLng, true) // where issue stemming from
-        }
     }
 
     // Request location permission
@@ -227,7 +226,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
     // Search query logic
-    private fun searchForLocation(query: String, currentLatLng: LatLng, filterByReviews: Boolean) {
+    private fun searchForLocation(query: String, currentLatLng: LatLng, minCount: Int = 0, maxCount: Int = Int.MAX_VALUE) {
         // State info we want on each place
         val placeFields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG, Place.Field.USER_RATINGS_TOTAL)
 
@@ -246,17 +245,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val results = response.places
 
                 // Optional filter by review number
-                val filteredResults = if (filterByReviews) {
-                    results.sortedByDescending { it.userRatingsTotal ?: 0 }.take(10)
-                } else {
-                    results
-                }
+                val filteredResults = results.filter { (it.userRatingsTotal ?: 0) in minCount..maxCount }
 
                 // Display review summary stats
                 val reviewList = results.mapNotNull { it.userRatingsTotal }
 
                 if (reviewList.isNotEmpty()) {
                     val highestReviews = reviewList.maxOrNull() ?: 0
+                    val roundedHighestReviews = ceil(highestReviews / 10.0) * 10
                     val meanReviews = reviewList.average().toInt()
 
                     highestReviewsTextView.text = "Highest Reviews: $highestReviews"
@@ -264,6 +260,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 
                     reviewCountButton.visibility = View.VISIBLE
                     reviewCountSummary.visibility = View.VISIBLE
+
+                    reviewCountButton.setOnClickListener {
+                        showSliderDialog(roundedHighestReviews.toInt())
+                    }
                 }
 
                 // Initialize bounds
@@ -315,6 +315,59 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // package as icon for google maps
         return BitmapDescriptorFactory.fromBitmap(bitmap)
+    }
+
+    // Filter logic
+    private fun filterReviewsbyCount(minCount: Int, maxCount: Int) {
+        searchForLocation(lastQuery, lastLatLng, minCount, maxCount)
+    }
+
+    // Slider dialog logic
+    private fun showSliderDialog(roundedHighestReviews: Int) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_slider, null)
+        val rangeSlider = dialogView.findViewById<com.jaygoo.widget.RangeSeekBar>(R.id.review_count_range_slider)
+        val sliderValue = dialogView.findViewById<TextView>(R.id.slider_value)
+        val cancelButton = dialogView.findViewById<Button>(R.id.slider_cancel_button)
+        val doneButton = dialogView.findViewById<Button>(R.id.slider_done_button)
+
+        val dialog = android.app.AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        rangeSlider.setRange(0f, roundedHighestReviews.toFloat())
+        rangeSlider.setProgress(0f, roundedHighestReviews.toFloat())
+        rangeSlider.setSteps(10)
+
+        sliderValue.text = "Range: 0 - ${roundedHighestReviews.toInt()}"
+
+        rangeSlider.setOnRangeChangedListener(object : com.jaygoo.widget.OnRangeChangedListener {
+            override fun onRangeChanged (
+                view: com.jaygoo.widget.RangeSeekBar,
+                min: Float,
+                max: Float,
+                isFromUser: Boolean
+            ) {
+                sliderValue.text = "Range: ${(min.toInt() / 10) * 10} - ${(max.toInt() / 10) * 10}"
+            }
+
+            override fun onStartTrackingTouch(view: com.jaygoo.widget.RangeSeekBar?, isLeft: Boolean) {}
+
+            override fun onStopTrackingTouch(view: com.jaygoo.widget.RangeSeekBar?, isLeft: Boolean) {}
+
+        })
+
+        cancelButton.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        doneButton.setOnClickListener {
+            val minCount = rangeSlider.leftSeekBar.progress.toInt()
+            val maxCount = rangeSlider.rightSeekBar.progress.toInt()
+            filterReviewsbyCount(minCount, maxCount)
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
 }
