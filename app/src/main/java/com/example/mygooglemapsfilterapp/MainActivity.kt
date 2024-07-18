@@ -204,7 +204,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Move location button to bottom right
         val locationButtonParent = (mapFragment.view?.findViewById<View>("1".toInt())?.parent as View)
         
-        locationButtonParent.background = ContextCompat.getDrawable(this, R.drawable.border) // debug
+        // locationButtonParent.background = ContextCompat.getDrawable(this, R.drawable.border) // debug
 
         val locationButton = locationButtonParent.findViewById<View>("2".toInt())
         val rlp = locationButton.layoutParams as RelativeLayout.LayoutParams
