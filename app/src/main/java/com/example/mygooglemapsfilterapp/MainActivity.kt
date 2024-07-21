@@ -82,6 +82,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var highestReviewsTextView: TextView
     private lateinit var meanReviewsTextView: TextView
 
+    // Filter
+    private var previousMin: Float = 0f
+    private var previousMax: Float = 0f
+
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
@@ -350,13 +354,27 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 max: Float,
                 isFromUser: Boolean
             ) {
+                if (isFromUser) {
+                    if (max - min < 10) {
+                        if (min != previousMin) {
+                            view.setProgress(max - 10, max)
+                        } else if (max != previousMax) {
+                            view.setProgress(min, min + 10)
+                        }
+                    } else {
+                        previousMin = min
+                        previousMax = max
+                    }
+                }
                 sliderValue.text = "Range: ${(min.toInt() / 10) * 10} - ${(max.toInt() / 10) * 10}"
             }
 
-            override fun onStartTrackingTouch(view: com.jaygoo.widget.RangeSeekBar?, isLeft: Boolean) {}
+            override fun onStartTrackingTouch(view: com.jaygoo.widget.RangeSeekBar?, isLeft: Boolean) {
+                previousMin = view?.leftSeekBar?.progress ?: 0f
+                previousMax = view?.rightSeekBar?.progress ?: 0f
+            }
 
             override fun onStopTrackingTouch(view: com.jaygoo.widget.RangeSeekBar?, isLeft: Boolean) {}
-
         })
 
         cancelButton.setOnClickListener {
