@@ -144,6 +144,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     mMap.clear()
                     reviewCountButton.visibility = View.GONE
                     reviewCountSummary.visibility = View.GONE
+                    reviewCountButton.text = "Reviews"
+                    reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_arrow_drop_down_black, 0)
                 }
 
                 return false
@@ -172,7 +174,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
 
-        // Enable zoom controls
+        // Enable zoom controls for debugging
         mMap.uiSettings.isZoomControlsEnabled = true
 
         // If missing existing location permission
@@ -364,6 +366,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             val minCount = rangeSlider.leftSeekBar.progress.toInt()
             val maxCount = rangeSlider.rightSeekBar.progress.toInt()
             filterReviewsbyCount(minCount, maxCount)
+            reviewCountButton.text = "$minCount - $maxCount"
+            reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
             dialog.dismiss()
         }
 
