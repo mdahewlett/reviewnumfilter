@@ -57,6 +57,7 @@ import com.example.mygooglemapsfilterapp.databinding.ActivityMainBinding
 // Filter
 import com.jaygoo.widget.RangeSeekBar
 import kotlin.math.ceil
+import kotlin.math.floor
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -366,7 +367,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             val minCount = rangeSlider.leftSeekBar.progress.toInt()
             val maxCount = rangeSlider.rightSeekBar.progress.toInt()
             filterReviewsbyCount(minCount, maxCount)
-            reviewCountButton.text = "$minCount - $maxCount"
+
+            val roundedMinCount = (floor(minCount / 10.0) * 10).toInt()
+            val roundedMaxCount = (ceil(maxCount / 10.0) * 10).toInt()
+            reviewCountButton.text = "$roundedMinCount - $roundedMaxCount"
             reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
             dialog.dismiss()
         }
