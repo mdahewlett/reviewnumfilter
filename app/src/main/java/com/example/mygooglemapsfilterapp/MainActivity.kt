@@ -262,8 +262,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 // Display review summary stats
                 val reviewList = results.mapNotNull { it.userRatingsTotal }
                 val clusters = calculateClusters(reviewList)
-                // val percentiles = calculatePercentiles(reviewList) // rank by percentile
-
 
                 if (reviewList.isNotEmpty()) {
                     val highestReviews = reviewList.maxOrNull() ?: 0
@@ -294,7 +292,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     val latLng = place.latLng
                     val reviews = place.userRatingsTotal ?: 0
                     val category = clusters[reviews] ?: "Low"
-                    // val category = categorizePlacesByReviews(reviews, percentiles) // filter by percentile
 
                     if (latLng != null) {
                         val customerMarker = createCustomMarker(this, reviews, category)
@@ -326,7 +323,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val indicator = when (category) {
             "Highest" -> "S "
             "High" -> "H "
-            else -> "O "
+            "Moderate" -> "M "
+            else -> "L "
         }
         reviewCountTextView.text = "$indicator$reviewCount"
 
@@ -437,30 +435,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         dialog.show()
     }
 
-    // REPLACED BY K MEANS CLUSTERING - calculate the review count at key percentiles
-    // fun calculatePercentiles(reviewCounts: List<Int>): Map<String, Int> {
-    //     if (reviewCounts.isEmpty()) {
-    //         return mapOf("p80" to 0, "p90" to 0)
-    //     }
-        
-    //     val maxReviews = reviewCounts.maxOrNull() ?: 0
-
-    //     val p80 = (maxReviews * 0.80).toInt()
-    //     val p90 = (maxReviews * 0.90).toInt()
-
-    //     return mapOf("p80" to p80, "p90" to p90)
-    // }
-
-    // // label places in relation to key review count percentiles
-    // fun categorizePlacesByReviews(reviewCounts: Int, percentiles: Map<String, Int>): String {
-    //     return when {
-    //         reviewCounts >= percentiles["p90"]!! -> "Top Reviews"
-    //         reviewCounts >= percentiles["p80"]!! -> "High Reviews"
-    //         else -> "Moderate and Low Reviews"
-    //     }
-    // }
-
-    fun calculateClusters(reviewCounts: List<Int>, numClusters: Int = 3): Map<Int, String> {
+    fun calculateClusters(reviewCounts: List<Int>, numClusters: Int = 4): Map<Int, String> {
         if (reviewCounts.isEmpty()) {
             return mapOf()
         }
@@ -475,7 +450,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         val sortedClusters = centroids.sortedDescending()
 
-        val labels = listOf("Highest", "High", "Moderate")
+        val labels = listOf("Highest", "High", "Moderate", "Low")
 
         val clusterMap = mutableMapOf<Int, String>()
         for ((index, cluster) in clusters.withIndex()) {
