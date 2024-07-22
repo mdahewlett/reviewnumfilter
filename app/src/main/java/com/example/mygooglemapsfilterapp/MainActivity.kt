@@ -233,7 +233,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
     // Search query logic
-    private fun searchForLocation(query: String, currentLatLng: LatLng, minCount: Int = 0, maxCount: Int = Int.MAX_VALUE) {
+    private fun searchForLocation(query: String, currentLatLng: LatLng, minCount: Int = 0, maxCount: Int = Int.MAX_VALUE, moveCamera: Boolean = true) {
         // State info we want on each place
         val placeFields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG, Place.Field.USER_RATINGS_TOTAL)
 
@@ -269,7 +269,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     reviewCountSummary.visibility = View.VISIBLE
 
                     reviewCountButton.setOnClickListener {
-                        showSliderDialog(roundedHighestReviews.toInt())
+                        showSliderDialog(roundedHighestReviews.toInt(), results)
                     }
                 }
 
@@ -294,7 +294,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
 
                 // Fit map to the bounds
-                mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100))
+                if (moveCamera) {
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100))
+                }
+                    
 
             }.addOnFailureListener { exception ->
                 Log.e("MainActivity", "Text search failed: ${exception.message}")
@@ -326,14 +329,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Filter logic
     private fun filterReviewsbyCount(minCount: Int, maxCount: Int) {
-        searchForLocation(lastQuery, lastLatLng, minCount, maxCount)
+        searchForLocation(lastQuery, lastLatLng, minCount, maxCount, moveCamera = false)
     }
 
     // Slider dialog logic
-    private fun showSliderDialog(roundedHighestReviews: Int) {
+    private fun showSliderDialog(roundedHighestReviews: Int, results: List<Place>) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_slider, null)
         val rangeSlider = dialogView.findViewById<com.jaygoo.widget.RangeSeekBar>(R.id.review_count_range_slider)
         val sliderValue = dialogView.findViewById<TextView>(R.id.slider_value)
+        val numberOfPlacesText = dialogView.findViewById<TextView>(R.id.number_of_places_text)
         val cancelButton = dialogView.findViewById<Button>(R.id.slider_cancel_button)
         val doneButton = dialogView.findViewById<Button>(R.id.slider_done_button)
 
@@ -342,10 +346,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             .create()
 
         rangeSlider.setRange(0f, roundedHighestReviews.toFloat())
-        rangeSlider.setProgress(0f, roundedHighestReviews.toFloat())
         rangeSlider.setSteps(10)
 
-        sliderValue.text = "Range: 0 - ${roundedHighestReviews.toInt()}"
+        var placesInRange: Int
+
+        if (previousMin != 0f || previousMax != 0f) {
+            rangeSlider.setProgress(previousMin, previousMax)
+            sliderValue.text = "Range: ${previousMin.toInt()} - ${previousMax.toInt()}"
+            placesInRange = results.count { (it.userRatingsTotal ?: 0) in previousMin.toInt()..previousMax.toInt() }
+
+        } else {
+            rangeSlider.setProgress(0f, roundedHighestReviews.toFloat())
+            sliderValue.text = "Range: 0 - ${roundedHighestReviews.toInt()}"
+            placesInRange = results.count { (it.userRatingsTotal ?: 0) in 0..roundedHighestReviews.toInt() }
+        }
+
+        numberOfPlacesText.text = "Places in range: $placesInRange"
 
         rangeSlider.setOnRangeChangedListener(object : com.jaygoo.widget.OnRangeChangedListener {
             override fun onRangeChanged (
@@ -367,6 +383,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     }
                 }
                 sliderValue.text = "Range: ${(min.toInt() / 10) * 10} - ${(max.toInt() / 10) * 10}"
+
+                placesInRange = results.count { (it.userRatingsTotal ?: 0) in min.toInt()..max.toInt() }
+                numberOfPlacesText.text = "Places in range: $placesInRange"
             }
 
             override fun onStartTrackingTouch(view: com.jaygoo.widget.RangeSeekBar?, isLeft: Boolean) {
