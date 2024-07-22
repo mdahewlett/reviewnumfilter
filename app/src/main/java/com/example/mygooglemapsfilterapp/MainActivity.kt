@@ -144,6 +144,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 return false
             }
 
+            // reset features when user clears search field
             override fun onQueryTextChange(newText: String?): Boolean {
                 if (newText.isNullOrEmpty()) {                    
                     mMap.clear()
@@ -256,6 +257,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                 // Display review summary stats
                 val reviewList = results.mapNotNull { it.userRatingsTotal }
+                val percentiles = calculatePercentiles(reviewList)
 
                 if (reviewList.isNotEmpty()) {
                     val highestReviews = reviewList.maxOrNull() ?: 0
@@ -284,9 +286,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     Log.i("MainActivity", place.name ?: "")
 
                     val latLng = place.latLng
+                    val reviews = place.userRatingsTotal ?: 0
+                    val category = categorizePlacesByReviews(reviews, percentiles)
+
                     if (latLng != null) {
-                        val reviews = place.userRatingsTotal ?: 0
-                        val customerMarker = createCustomMarker(this, reviews)
+                        val customerMarker = createCustomMarker(this, reviews, category)
 
                         mMap.addMarker(MarkerOptions().position(latLng).title(place.name).icon(customerMarker))
                         boundsBuilder.include(latLng)
@@ -305,14 +309,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     // Custom marker logic
-    private fun createCustomMarker(context: Context, reviewCount: Int): BitmapDescriptor {
+    private fun createCustomMarker(context: Context, reviewCount: Int, category: String): BitmapDescriptor {
         // create marker view
         val markerView = (context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater)
             .inflate(R.layout.customer_marker_layout, null)
         
-        // add review count
+        // add review count and category
         val reviewCountTextView = markerView.findViewById<TextView>(R.id.review_count)
-        reviewCountTextView.text = reviewCount.toString()
+        val indicator = when (category) {
+            "Top Reviews" -> "S "
+            "High Reviews" -> "H "
+            else -> "O "
+        }
+        reviewCountTextView.text = "$indicator$reviewCount"
 
         // set arbitrary size and location
         markerView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
@@ -344,12 +353,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val dialog = android.app.AlertDialog.Builder(this)
             .setView(dialogView)
             .create()
-
+        
+        // set slider range and steps
         rangeSlider.setRange(0f, roundedHighestReviews.toFloat())
         rangeSlider.setSteps(10)
 
         var placesInRange: Int
 
+        // set slider buttons and display information
         if (previousMin != 0f || previousMax != 0f) {
             rangeSlider.setProgress(previousMin, previousMax)
             sliderValue.text = "Range: ${previousMin.toInt()} - ${previousMax.toInt()}"
@@ -363,6 +374,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         numberOfPlacesText.text = "Places in range: $placesInRange"
 
+        // prevent sliders passing each other, update displayed info as sliders move 
         rangeSlider.setOnRangeChangedListener(object : com.jaygoo.widget.OnRangeChangedListener {
             override fun onRangeChanged (
                 view: com.jaygoo.widget.RangeSeekBar,
@@ -401,18 +413,45 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         doneButton.setOnClickListener {
+            // filter by range
             val minCount = rangeSlider.leftSeekBar.progress.toInt()
             val maxCount = rangeSlider.rightSeekBar.progress.toInt()
             filterReviewsbyCount(minCount, maxCount)
 
+            // display selected range
             val roundedMinCount = (floor(minCount / 10.0) * 10).toInt()
             val roundedMaxCount = (ceil(maxCount / 10.0) * 10).toInt()
             reviewCountButton.text = "$roundedMinCount - $roundedMaxCount"
             reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+
             dialog.dismiss()
         }
 
         dialog.show()
+    }
+
+    // calculate the review count at key percentiles
+    fun calculatePercentiles(reviewCounts: List<Int>): Map<String, Int> {
+        if (reviewCounts.isEmpty()) {
+            return mapOf("p95" to 0, "p99" to 0)
+        }
+        
+        val sortedReviews = reviewCounts.sorted()
+        val size = sortedReviews.size
+
+        val p95 = sortedReviews[(size * 95).toInt().coerceAtMost(size - 1)]
+        val p99 = sortedReviews[(size * 99).toInt().coerceAtMost(size - 1)]
+
+        return mapOf("p95" to p95, "p99" to p99)
+    }
+
+    // label places in relation to key review count percentiles
+    fun categorizePlacesByReviews(reviewCounts: Int, percentiles: Map<String, Int>): String {
+        return when {
+            reviewCounts >= percentiles["p99"]!! -> "Top Reviews"
+            reviewCounts >= percentiles["p95"]!! -> "High Reviews"
+            else -> "Moderate and Low Reviews"
+        }
     }
 
 }
