@@ -433,23 +433,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // calculate the review count at key percentiles
     fun calculatePercentiles(reviewCounts: List<Int>): Map<String, Int> {
         if (reviewCounts.isEmpty()) {
-            return mapOf("p95" to 0, "p99" to 0)
+            return mapOf("p80" to 0, "p90" to 0)
         }
         
-        val sortedReviews = reviewCounts.sorted()
-        val size = sortedReviews.size
+        val maxReviews = reviewCounts.maxOrNull() ?: 0
 
-        val p95 = sortedReviews[(size * 95).toInt().coerceAtMost(size - 1)]
-        val p99 = sortedReviews[(size * 99).toInt().coerceAtMost(size - 1)]
+        val p80 = (maxReviews * 0.80).toInt()
+        val p90 = (maxReviews * 0.90).toInt()
 
-        return mapOf("p95" to p95, "p99" to p99)
+        return mapOf("p80" to p80, "p90" to p90)
     }
 
     // label places in relation to key review count percentiles
     fun categorizePlacesByReviews(reviewCounts: Int, percentiles: Map<String, Int>): String {
         return when {
-            reviewCounts >= percentiles["p99"]!! -> "Top Reviews"
-            reviewCounts >= percentiles["p95"]!! -> "High Reviews"
+            reviewCounts >= percentiles["p90"]!! -> "Top Reviews"
+            reviewCounts >= percentiles["p80"]!! -> "High Reviews"
             else -> "Moderate and Low Reviews"
         }
     }
