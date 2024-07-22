@@ -63,6 +63,8 @@ import org.apache.commons.math3.ml.clustering.Clusterable
 import org.apache.commons.math3.ml.clustering.KMeansPlusPlusClusterer
 import org.apache.commons.math3.ml.clustering.DoublePoint
 
+data class ClusterRange(val label: String, val min: Int, val max: Int)
+
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // System
@@ -261,7 +263,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                 // Display review summary stats
                 val reviewList = results.mapNotNull { it.userRatingsTotal }
-                val clusters = calculateClusters(reviewList)
+                val (clusters, clusterRanges) = calculateClusters(reviewList)
 
                 if (reviewList.isNotEmpty()) {
                     val highestReviews = reviewList.maxOrNull() ?: 0
@@ -277,6 +279,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     reviewCountButton.setOnClickListener {
                         showSliderDialog(roundedHighestReviews.toInt(), results)
                     }
+
+                    updateReviewCountSummary(clusterRanges)
                 }
 
                 // Initialize bounds
@@ -321,9 +325,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // add review count and category
         val reviewCountTextView = markerView.findViewById<TextView>(R.id.review_count)
         val indicator = when (category) {
-            "Highest" -> "S "
-            "High" -> "H "
-            "Moderate" -> "M "
+            "S" -> "S "
+            "H" -> "H "
+            "M" -> "M "
             else -> "L "
         }
         reviewCountTextView.text = "$indicator$reviewCount"
@@ -427,7 +431,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             val roundedMinCount = (floor(minCount / 10.0) * 10).toInt()
             val roundedMaxCount = (ceil(maxCount / 10.0) * 10).toInt()
             reviewCountButton.text = "$roundedMinCount - $roundedMaxCount"
-            reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+            reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(
+                R.drawable.ic_check, 
+                0, 
+                R.drawable.ic_arrow_drop_down_black, 
+                0
+            )
 
             dialog.dismiss()
         }
@@ -435,9 +444,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         dialog.show()
     }
 
-    fun calculateClusters(reviewCounts: List<Int>, numClusters: Int = 4): Map<Int, String> {
+    fun calculateClusters(reviewCounts: List<Int>, numClusters: Int = 4): Pair<Map<Int, String>, List<ClusterRange>> {
         if (reviewCounts.isEmpty()) {
-            return mapOf()
+            return Pair(mapOf(), listOf())
         }
 
         val points = reviewCounts.map { DoublePoint(doubleArrayOf(it.toDouble())) }
@@ -448,19 +457,43 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         cluster.points.map { it.point[0] }.average()
         }
 
-        val sortedClusters = centroids.sortedDescending()
+        val sortedClusters = centroids.zip(clusters).sortedByDescending { it.first }
 
-        val labels = listOf("Highest", "High", "Moderate", "Low")
+        val labels = listOf("S", "H", "M", "L")
 
         val clusterMap = mutableMapOf<Int, String>()
-        for ((index, cluster) in clusters.withIndex()) {
-            val label = labels[sortedClusters.indexOf(centroids[index])]
+        val clusterRanges = mutableListOf<ClusterRange>()
+
+        for ((index, pair) in sortedClusters.withIndex()) {
+            val (centroied, cluster) = pair
+            val label = labels[index]
+            val min = cluster.points.minOf { it.point[0].toInt() }
+            val max = cluster.points.maxOf { it.point[0].toInt() }
+            val roundedMin = (min / 100) * 100
+            val roundedMax = ((max + 99) / 100) * 100
+            clusterRanges.add(ClusterRange(label, roundedMin, roundedMax))
+
+
             for (point in cluster.points) {
                 clusterMap[point.point[0].toInt()] = label
             }
         }
 
-        return clusterMap
+        return Pair(clusterMap, clusterRanges)
+    }
+
+    private fun updateReviewCountSummary(clusterRanges: List<ClusterRange>) {
+        reviewCountSummary.removeAllViews()
+
+        val labelOrder = listOf("S", "H", "M", "L")
+
+        val sortedRanges = clusterRanges.sortedBy { labelOrder.indexOf(it.label) }
+
+        for (range in sortedRanges) {
+            val textView = TextView(this)
+            textView.text = "${range.label}: ${range.min} - ${range.max}"
+            reviewCountSummary.addView(textView)
+        }
     }
 
 }
