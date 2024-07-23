@@ -85,8 +85,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // Reviews
     private lateinit var reviewCountButton: Button
     private lateinit var reviewCountSummary: LinearLayout
-    private lateinit var highestReviewsTextView: TextView
-    private lateinit var meanReviewsTextView: TextView
 
     // Filter
     private var previousMin: Float = 0f
@@ -126,8 +124,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         searchView = binding.searchView
         reviewCountButton = binding.reviewCountButton
         reviewCountSummary = binding.reviewCountSummary
-        highestReviewsTextView = binding.highestReviews
-        meanReviewsTextView = binding.meanReviews
         
         // Show/hide elements
         reviewCountButton.visibility = View.GONE
@@ -268,11 +264,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 if (reviewList.isNotEmpty()) {
                     val highestReviews = reviewList.maxOrNull() ?: 0
                     val roundedHighestReviews = ceil(highestReviews / 10.0) * 10
-                    val meanReviews = reviewList.average().toInt()
 
-                    highestReviewsTextView.text = "Highest Reviews: $highestReviews"
-                    meanReviewsTextView.text = "Mean Reviews: $meanReviews"
-                
                     reviewCountButton.visibility = View.VISIBLE
                     reviewCountSummary.visibility = View.VISIBLE
 

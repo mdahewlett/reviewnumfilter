@@ -45,21 +45,6 @@
         android:layout_marginBottom="40dp"
         android:layout_marginLeft="10dp"
         android:background="@drawable/rounded_corners">
-    
-        <TextView 
-            android:id="@+id/highest_reviews"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Highest Reviews: "
-        />
-
-        <TextView 
-            android:id="@+id/mean_reviews"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Mean Reviews: "
-        />
-
     </LinearLayout>
         
 </RelativeLayout>
