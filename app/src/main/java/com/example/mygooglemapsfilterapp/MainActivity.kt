@@ -81,6 +81,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var placesClient: PlacesClient
     private lateinit var lastQuery: String
     private lateinit var lastLatLng: LatLng
+    private lateinit var noResultsTextView: TextView
 
     // Reviews
     private lateinit var reviewCountButton: Button
@@ -122,6 +123,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Initialize views
         searchView = binding.searchView
+        noResultsTextView = binding.noResultsMessage
         reviewCountButton = binding.reviewCountButton
         reviewCountSummary = binding.reviewCountSummary
         
@@ -253,6 +255,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             .addOnSuccessListener { response ->
                 mMap.clear()
                 val results = response.places
+
+                if(results.isEmpty()) {
+                    noResultsTextView.visibility = View.VISIBLE
+                    return@addOnSuccessListener
+                }
+
+                noResultsTextView.visibility = View.GONE                
 
                 // Optional filter by review number
                 val filteredResults = results.filter { (it.userRatingsTotal ?: 0) in minCount..maxCount }
