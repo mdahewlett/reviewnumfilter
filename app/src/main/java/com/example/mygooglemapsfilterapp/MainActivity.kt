@@ -22,6 +22,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.appcompat.app.AlertDialog
 
 // Google Location Services
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -81,7 +82,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var placesClient: PlacesClient
     private lateinit var lastQuery: String
     private lateinit var lastLatLng: LatLng
-    private lateinit var noResultsTextView: TextView
+    private var noResultsDialog: AlertDialog? = null
 
     // Reviews
     private lateinit var reviewCountButton: Button
@@ -123,7 +124,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Initialize views
         searchView = binding.searchView
-        noResultsTextView = binding.noResultsMessage
         reviewCountButton = binding.reviewCountButton
         reviewCountSummary = binding.reviewCountSummary
         
@@ -140,7 +140,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                             location?.let {
                                 lastLatLng = LatLng(it.latitude, it.longitude)
                                 lastQuery = query
-                                searchForLocation(query, lastLatLng)
+                                searchForLocation(query)
                             }
                         }
                     }
@@ -238,7 +238,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
     // Search query logic
-    private fun searchForLocation(query: String, currentLatLng: LatLng, minCount: Int = 0, maxCount: Int = Int.MAX_VALUE, moveCamera: Boolean = true) {
+    private fun searchForLocation(query: String, minCount: Int = 0, maxCount: Int = Int.MAX_VALUE, moveCamera: Boolean = true) {
         // State info we want on each place
         val placeFields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG, Place.Field.USER_RATINGS_TOTAL)
 
@@ -257,11 +257,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val results = response.places
 
                 if(results.isEmpty()) {
-                    noResultsTextView.visibility = View.VISIBLE
+                    showNoResultsDialog()
                     return@addOnSuccessListener
                 }
-
-                noResultsTextView.visibility = View.GONE                
 
                 // Optional filter by review number
                 val filteredResults = results.filter { (it.userRatingsTotal ?: 0) in minCount..maxCount }
@@ -348,7 +346,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Filter logic
     private fun filterReviewsbyCount(minCount: Int, maxCount: Int) {
-        searchForLocation(lastQuery, lastLatLng, minCount, maxCount, moveCamera = false)
+        searchForLocation(lastQuery, minCount, maxCount, moveCamera = false)
     }
 
     // Slider dialog logic
@@ -466,7 +464,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val clusterRanges = mutableListOf<ClusterRange>()
 
         for ((index, pair) in sortedClusters.withIndex()) {
-            val (centroied, cluster) = pair
+            val cluster = pair.second
             val label = labels[index]
             val min = cluster.points.minOf { it.point[0].toInt() }
             val max = cluster.points.maxOf { it.point[0].toInt() }
@@ -495,6 +493,35 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             textView.text = "${range.label}: ${range.min} - ${range.max}"
             reviewCountSummary.addView(textView)
         }
+    }
+
+    // No results dialog logic
+    private fun showNoResultsDialog() {
+
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_noresults, null)
+        val closeButton = dialogView.findViewById<Button>(R.id.no_results_close_button)
+
+        val dialog = android.app.AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+        
+        if (dialog.isShowing == true) {
+            Log.d("MainActivity", "No results dialog already showing")
+            return
+        }
+
+        closeButton.setOnClickListener {
+            Log.d("MainActivity", "Close button clicked")
+            searchView.setQuery("", false)
+            searchView.clearFocus()
+            Log.d("MainActivity", "Search cleared")
+            dialog.dismiss()
+            Log.d("MainActivity", "Dialog dismissed")
+        }
+
+        dialog.show()
+        Log.d("MainActivity", "No results dialog opened")
     }
 
 }
