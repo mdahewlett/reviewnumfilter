@@ -87,6 +87,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // Reviews
     private lateinit var reviewCountButton: Button
     private lateinit var reviewCountSummary: LinearLayout
+    private lateinit var clusters: Map<Int, String>
 
     // Filter
     private var previousMin: Float = 0f
@@ -161,7 +162,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 return false
             }
         })
-
     }
 
     // Request location permission
@@ -253,7 +253,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Send request
         placesClient.searchByText(request)
             .addOnSuccessListener { response ->
-                mMap.clear()
                 val results = response.places
 
                 if(results.isEmpty()) {
@@ -261,12 +260,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     return@addOnSuccessListener
                 }
 
-                // Optional filter by review number
-                val filteredResults = results.filter { (it.userRatingsTotal ?: 0) in minCount..maxCount }
-
                 // Display review summary stats
                 val reviewList = results.mapNotNull { it.userRatingsTotal }
-                val (clusters, clusterRanges) = calculateClusters(reviewList)
+                val (calculateClusters, clusterRanges) = calculateClusters(reviewList)
+                clusters = calculateClusters
 
                 if (reviewList.isNotEmpty()) {
                     val highestReviews = reviewList.maxOrNull() ?: 0
@@ -282,33 +279,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     updateReviewCountSummary(clusterRanges)
                 }
 
-                // Initialize bounds
-                val boundsBuilder = LatLngBounds.builder()
-
                 // Add map markers
-                for (place in filteredResults) {
-
-                    // Log for development purposes, removed in production
-                    Log.i("MainActivity", place.id ?: "")
-                    Log.i("MainActivity", place.name ?: "")
-
-                    val latLng = place.latLng
-                    val reviews = place.userRatingsTotal ?: 0
-                    val category = clusters[reviews] ?: "Low"
-
-                    if (latLng != null) {
-                        val customerMarker = createCustomMarker(this, reviews, category)
-
-                        mMap.addMarker(MarkerOptions().position(latLng).title(place.name).icon(customerMarker))
-                        boundsBuilder.include(latLng)
-                    }
-                }
-
-                // Fit map to the bounds
-                if (moveCamera) {
-                    mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100))
-                }
-                    
+                addMarkersToMap(results, clusters, moveCamera)
 
             }.addOnFailureListener { exception ->
                 Log.e("MainActivity", "Text search failed: ${exception.message}")
@@ -319,7 +291,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun createCustomMarker(context: Context, reviewCount: Int, category: String): BitmapDescriptor {
         // create marker view
         val markerView = (context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater)
-            .inflate(R.layout.customer_marker_layout, null)
+            .inflate(R.layout.custom_marker_layout, null)
         
         // add review count and category
         val reviewCountTextView = markerView.findViewById<TextView>(R.id.review_count)
@@ -344,9 +316,39 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         return BitmapDescriptorFactory.fromBitmap(bitmap)
     }
 
+    // Add marker logic
+    private fun addMarkersToMap(places: List<Place>, clusters: Map<Int, String>, moveCamera:Boolean = true) {
+        mMap.clear()
+
+        // Initialize bounds
+        val boundsBuilder = LatLngBounds.builder()
+
+        // Add markers
+        for (place in places) {
+
+            Log.i("MainActivity", place.id ?: "") // debug
+            Log.i("MainActivity", place.name ?: "") // debug
+
+            val latLng = place.latLng
+            val reviews = place.userRatingsTotal ?: 0
+            val category = clusters[reviews] ?: "Low"
+            if (latLng != null) {
+                val customMarker = createCustomMarker(this, reviews, category)
+                mMap.addMarker(MarkerOptions().position(latLng).title(place.name).icon(customMarker))
+                boundsBuilder.include(latLng)
+            }
+        }
+
+        // Fit map to the bounds
+        if (moveCamera) {
+            mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100))
+        }
+    }
+
     // Filter logic
-    private fun filterReviewsbyCount(minCount: Int, maxCount: Int) {
-        searchForLocation(lastQuery, minCount, maxCount, moveCamera = false)
+    private fun filterReviewsbyCount(results: List<Place>, minCount: Int, maxCount: Int) {
+        val filteredResults = results.filter { (it.userRatingsTotal ?: 0) in minCount..maxCount }
+        addMarkersToMap(filteredResults, clusters, moveCamera = false)
     }
 
     // Slider dialog logic
@@ -424,7 +426,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             // filter by range
             val minCount = rangeSlider.leftSeekBar.progress.toInt()
             val maxCount = rangeSlider.rightSeekBar.progress.toInt()
-            filterReviewsbyCount(minCount, maxCount)
+
+            Log.d("MainActivity", "Filtering with minCount: $minCount, maxCount: $maxCount")
+            Log.d("MainActivity", "Clusters: $clusters")
+
+            filterReviewsbyCount(results, minCount, maxCount)
 
             // display selected range
             val roundedMinCount = (floor(minCount / 10.0) * 10).toInt()

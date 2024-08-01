@@ -9,7 +9,7 @@
         android:id="@+id/review_count"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@drawable/customer_marker_background"
+        android:background="@drawable/custom_marker_background"
         android:padding="4dp"
         android:textColor="@android:color/white"
         android:textSize="12sp"
