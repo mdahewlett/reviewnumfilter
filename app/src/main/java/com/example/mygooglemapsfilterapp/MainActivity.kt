@@ -141,6 +141,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                             location?.let {
                                 lastLatLng = LatLng(it.latitude, it.longitude)
                                 lastQuery = query
+                                resetReviewFilter()
                                 searchForLocation(query)
                             }
                         }
@@ -153,10 +154,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             override fun onQueryTextChange(newText: String?): Boolean {
                 if (newText.isNullOrEmpty()) {                    
                     mMap.clear()
-                    reviewCountButton.visibility = View.GONE
-                    reviewCountSummary.visibility = View.GONE
-                    reviewCountButton.text = "Reviews"
-                    reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_arrow_drop_down_black, 0)
+                    resetReviewFilter()
                 }
 
                 return false
@@ -423,6 +421,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         doneButton.setOnClickListener {
+            
             // filter by range
             val minCount = rangeSlider.leftSeekBar.progress.toInt()
             val maxCount = rangeSlider.rightSeekBar.progress.toInt()
@@ -433,15 +432,25 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             filterReviewsbyCount(results, minCount, maxCount)
 
             // display selected range
-            val roundedMinCount = (floor(minCount / 10.0) * 10).toInt()
-            val roundedMaxCount = (ceil(maxCount / 10.0) * 10).toInt()
-            reviewCountButton.text = "$roundedMinCount - $roundedMaxCount"
-            reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(
-                R.drawable.ic_check, 
-                0, 
-                R.drawable.ic_arrow_drop_down_black, 
-                0
-            )
+            if (rangeSlider.leftSeekBar.progress != 0f || rangeSlider.rightSeekBar.progress != roundedHighestReviews.toFloat()) {
+                val roundedMinCount = (floor(minCount / 10.0) * 10).toInt()
+                val roundedMaxCount = (ceil(maxCount / 10.0) * 10).toInt()
+                reviewCountButton.text = "$roundedMinCount - $roundedMaxCount"
+                reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(
+                    R.drawable.ic_check, 
+                    0, 
+                    R.drawable.ic_arrow_drop_down_black, 
+                    0
+                )
+            } else {
+                reviewCountButton.text = "Reviews"
+                reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(
+                    0, 
+                    0, 
+                    R.drawable.ic_arrow_drop_down_black, 
+                    0
+                )
+            }
 
             dialog.dismiss()
         }
@@ -528,6 +537,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         dialog.show()
         Log.d("MainActivity", "No results dialog opened")
+    }
+
+    // Clear filter
+    private fun resetReviewFilter() {
+        reviewCountButton.visibility = View.GONE
+        reviewCountSummary.visibility = View.GONE
+        reviewCountButton.text = "Reviews"
+        reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_arrow_drop_down_black, 0)
+        previousMin = 0f
+        previousMax = 0f
     }
 
 }
