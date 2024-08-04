@@ -251,6 +251,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Send request
         placesClient.searchByText(request)
             .addOnSuccessListener { response ->
+
+                Log.d("MainActivity", "Full response: $response")
+
+                response.places.forEach { place -> 
+                    Log.d("MainActivity", "Place: $place")
+                    }
+                    
                 val results = response.places
 
                 if(results.isEmpty()) {
