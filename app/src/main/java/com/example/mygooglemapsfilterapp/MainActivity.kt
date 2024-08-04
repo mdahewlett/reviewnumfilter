@@ -54,6 +54,13 @@ import android.graphics.Paint
 
 // Misc
 import com.example.mygooglemapsfilterapp.databinding.ActivityMainBinding
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Callback
+import okhttp3.Call
+import okhttp3.Response
+import java.io.IOException
+import org.json.JSONObject
 
 // Filter
 import com.jaygoo.widget.RangeSeekBar
@@ -237,60 +244,96 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Search query logic
     private fun searchForLocation(query: String, minCount: Int = 0, maxCount: Int = Int.MAX_VALUE, moveCamera: Boolean = true) {
-        // State info we want on each place
-        val placeFields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG, Place.Field.USER_RATINGS_TOTAL)
+        val client = OkHttpClient()
+        val apiKey = BuildConfig.PLACES_API_KEY
 
         // Get the map's current bounds
         val bounds = mMap.projection.visibleRegion.latLngBounds
+        val northeast = bounds.northeast
+        val southwest = bounds.southwest
+        val locationBias = "rectangle:${southwest.latitude},${southwest.longitude}|${northeast.latitude},${northeast.longitude}"
 
-        // Format request for the API
-        val request = SearchByTextRequest.builder(query, placeFields)
-            .setLocationRestriction(RectangularBounds.newInstance(bounds))
-            .build();
+        val url = "https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query.replace(" ", "+")}&locationbias=$locationBias&key=$apiKey"
 
-        // Send request
-        placesClient.searchByText(request)
-            .addOnSuccessListener { response ->
+        Log.d("MainActivity", "Request URL: $url")
 
-                Log.d("MainActivity", "Full response: $response")
+        Log.d("MainActivity", "Map bounds: NE(${bounds.northeast.latitude}, ${bounds.northeast.longitude}), SW(${bounds.southwest.latitude}, ${bounds.southwest.longitude})")
 
-                response.places.forEach { place -> 
-                    Log.d("MainActivity", "Place: $place")
-                    }
-                    
-                val results = response.places
+        val request = Request.Builder()
+            .url(url)
+            .build()
 
-                if(results.isEmpty()) {
-                    showNoResultsDialog()
-                    return@addOnSuccessListener
-                }
-
-                // Display review summary stats
-                val reviewList = results.mapNotNull { it.userRatingsTotal }
-                val (calculateClusters, clusterRanges) = calculateClusters(reviewList)
-                clusters = calculateClusters
-
-                if (reviewList.isNotEmpty()) {
-                    val highestReviews = reviewList.maxOrNull() ?: 0
-                    val roundedHighestReviews = ceil(highestReviews / 10.0) * 10
-
-                    reviewCountButton.visibility = View.VISIBLE
-                    reviewCountSummary.visibility = View.VISIBLE
-
-                    reviewCountButton.setOnClickListener {
-                        showSliderDialog(roundedHighestReviews.toInt(), results)
-                    }
-
-                    updateReviewCountSummary(clusterRanges)
-                }
-
-                // Add map markers
-                addMarkersToMap(results, clusters, moveCamera)
-
-            }.addOnFailureListener { exception ->
-                Log.e("MainActivity", "Text search failed: ${exception.message}")
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("MainActivity", "Text search failed: ${e.message}")
             }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (response.isSuccessful) {
+                    val myResponse = response.body?.string()
+
+                    myResponse?.let {
+                        val jsonResponse = JSONObject(it)
+                        val results =jsonResponse.getJSONArray("results")
+                        val places = mutableListOf<PlaceData>()
+
+                        for (i in 0 until results.length()) {
+                            val result = results.getJSONObject(i)
+                            val place = PlaceData(
+                                id = result.getString("place_id"),
+                                name = result.getString("name"),
+                                latLng = LatLng(
+                                    result.getJSONObject("geometry").getJSONObject("location").getDouble("lat"),
+                                    result.getJSONObject("geometry").getJSONObject("location").getDouble("lng")
+                                ),
+                                userRatingsTotal = result.optInt("user_ratings_total", 0)
+                            )
+                            places.add(place)
+                        }
+
+                        runOnUiThread {
+                            if (places.isEmpty()) {
+                                showNoResultsDialog()
+                                return@runOnUiThread
+                            }
+
+                            for (place in places) {
+                            Log.d("MainActivity", "Place: ${place.name}, Location: (${place.latLng.latitude}, ${place.latLng.longitude}), Ratings: ${place.userRatingsTotal}")
+                            }
+
+                            val reviewList = places.mapNotNull { it.userRatingsTotal }
+                            val (calculateClusters, clusterRanges) = calculateClusters(reviewList)
+                            clusters = calculateClusters
+
+                            if (reviewList.isNotEmpty()) {
+                                val highestReviews = reviewList.maxOrNull() ?: 0
+                                val roundedHighestReviews = ceil(highestReviews / 10.0) * 10
+
+                                reviewCountButton.visibility = View.VISIBLE
+                                reviewCountSummary.visibility = View.VISIBLE
+
+                                reviewCountButton.setOnClickListener {
+                                    showSliderDialog(roundedHighestReviews.toInt(), places)
+                                }
+
+                                updateReviewCountSummary(clusterRanges)
+                            }
+
+                            // Add map markers
+                            addMarkersToMap(places, clusters, moveCamera)
+                        }
+                    }
+                }
+            }
+        })
     }
+
+    data class PlaceData(
+        val id: String,
+        val name: String,
+        val latLng: LatLng,
+        val userRatingsTotal: Int
+    )
 
     // Custom marker logic
     private fun createCustomMarker(context: Context, reviewCount: Int, category: String): BitmapDescriptor {
@@ -322,7 +365,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     // Add marker logic
-    private fun addMarkersToMap(places: List<Place>, clusters: Map<Int, String>, moveCamera:Boolean = true) {
+    private fun addMarkersToMap(places: List<PlaceData>, clusters: Map<Int, String>, moveCamera:Boolean = true) {
         mMap.clear()
 
         // Initialize bounds
@@ -351,13 +394,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     // Filter logic
-    private fun filterReviewsbyCount(results: List<Place>, minCount: Int, maxCount: Int) {
+    private fun filterReviewsbyCount(results: List<PlaceData>, minCount: Int, maxCount: Int) {
         val filteredResults = results.filter { (it.userRatingsTotal ?: 0) in minCount..maxCount }
         addMarkersToMap(filteredResults, clusters, moveCamera = false)
     }
 
     // Slider dialog logic
-    private fun showSliderDialog(roundedHighestReviews: Int, results: List<Place>) {
+    private fun showSliderDialog(roundedHighestReviews: Int, results: List<PlaceData>) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_slider, null)
         val rangeSlider = dialogView.findViewById<com.jaygoo.widget.RangeSeekBar>(R.id.review_count_range_slider)
         val sliderValue = dialogView.findViewById<TextView>(R.id.slider_value)
@@ -557,3 +600,53 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
 }
+
+
+        // // State info we want on each place
+        // val placeFields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG, Place.Field.USER_RATINGS_TOTAL)
+
+        // // Get the map's current bounds
+        // val bounds = mMap.projection.visibleRegion.latLngBounds
+
+        // // Format request for the API
+        // val request = SearchByTextRequest.builder(query, placeFields)
+        //     .setLocationRestriction(RectangularBounds.newInstance(bounds))
+        //     .build();
+// // Send request
+//         placesClient.searchByText(request)
+//             .addOnSuccessListener { response ->
+
+//                 Log.d("MainActivity", "Full response: $response")
+                    
+//                 val results = response.places
+
+//                 if(results.isEmpty()) {
+//                     showNoResultsDialog()
+//                     return@addOnSuccessListener
+//                 }
+
+//                 // Display review summary stats
+//                 val reviewList = results.mapNotNull { it.userRatingsTotal }
+//                 val (calculateClusters, clusterRanges) = calculateClusters(reviewList)
+//                 clusters = calculateClusters
+
+//                 if (reviewList.isNotEmpty()) {
+//                     val highestReviews = reviewList.maxOrNull() ?: 0
+//                     val roundedHighestReviews = ceil(highestReviews / 10.0) * 10
+
+//                     reviewCountButton.visibility = View.VISIBLE
+//                     reviewCountSummary.visibility = View.VISIBLE
+
+//                     reviewCountButton.setOnClickListener {
+//                         showSliderDialog(roundedHighestReviews.toInt(), results)
+//                     }
+
+//                     updateReviewCountSummary(clusterRanges)
+//                 }
+
+//                 // Add map markers
+//                 addMarkersToMap(results, clusters, moveCamera)
+
+//             }.addOnFailureListener { exception ->
+//                 Log.e("MainActivity", "Text search failed: ${exception.message}")
+//             }
