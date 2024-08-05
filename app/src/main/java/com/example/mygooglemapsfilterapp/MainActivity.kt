@@ -10,6 +10,8 @@ import android.view.View
 import android.view.LayoutInflater
 import android.view.inputmethod.InputMethodManager
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 
 // Android components
 import android.widget.RelativeLayout
@@ -40,6 +42,14 @@ import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 
 // Places API
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Callback
+import okhttp3.Call
+import okhttp3.Response
+import java.io.IOException
+import org.json.JSONObject
+import java.net.URLEncoder
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.model.RectangularBounds
@@ -54,14 +64,6 @@ import android.graphics.Paint
 
 // Misc
 import com.example.mygooglemapsfilterapp.databinding.ActivityMainBinding
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Callback
-import okhttp3.Call
-import okhttp3.Response
-import java.io.IOException
-import org.json.JSONObject
-import java.net.URLEncoder
 
 // Filter
 import com.jaygoo.widget.RangeSeekBar
@@ -238,7 +240,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
     // Search query logic
-    private fun searchForLocation(query: String, minCount: Int = 0, maxCount: Int = Int.MAX_VALUE, moveCamera: Boolean = true) {
+    private fun searchForLocation(query: String, minCount: Int = 0, maxCount: Int = Int.MAX_VALUE, moveCamera: Boolean = true, pageToken: String? = null, accumulatedResults: MutableList<PlaceData> = mutableListOf()) {
         val client = OkHttpClient()
         val apiKey = BuildConfig.PLACES_API_KEY
 
@@ -259,7 +261,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         )
         val radius = (results[0] / 2).toInt()
 
-        val url = "https://maps.googleapis.com/maps/api/place/textsearch/json?query=${URLEncoder.encode(query, "UTF-8")}&location=${center.latitude},${center.longitude}&radius=$radius&key=$apiKey"
+        val url = "https://maps.googleapis.com/maps/api/place/textsearch/json?query=${URLEncoder.encode(query, "UTF-8")}&location=${center.latitude},${center.longitude}&radius=$radius&key=$apiKey${if (pageToken != null) "&pagetoken=$pageToken" else ""}"
 
         Log.d("MainActivity", "Request URL: $url")
 
@@ -281,7 +283,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     myResponse?.let {
                         val jsonResponse = JSONObject(it)
                         val results =jsonResponse.getJSONArray("results")
-                        val places = mutableListOf<PlaceData>()
 
                         for (i in 0 until results.length()) {
                             val result = results.getJSONObject(i)
@@ -294,39 +295,46 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                 ),
                                 userRatingsTotal = result.optInt("user_ratings_total", 0)
                             )
-                            places.add(place)
-                        }                     
+                            accumulatedResults.add(place)
+                        }
 
-                        runOnUiThread {
-                            if (places.isEmpty()) {
-                                showNoResultsDialog()
-                                return@runOnUiThread
-                            }
-
-                            for (place in places) {
-                            Log.d("MainActivity", "Place: ${place.name}, Location: (${place.latLng.latitude}, ${place.latLng.longitude}), Ratings: ${place.userRatingsTotal}")
-                            }
-
-                            val reviewList = places.mapNotNull { it.userRatingsTotal }
-                            val (calculateClusters, clusterRanges) = calculateClusters(reviewList)
-                            clusters = calculateClusters
-
-                            if (reviewList.isNotEmpty()) {
-                                val highestReviews = reviewList.maxOrNull() ?: 0
-                                val roundedHighestReviews = ceil(highestReviews / 10.0) * 10
-
-                                reviewCountButton.visibility = View.VISIBLE
-                                reviewCountSummary.visibility = View.VISIBLE
-
-                                reviewCountButton.setOnClickListener {
-                                    showSliderDialog(roundedHighestReviews.toInt(), places)
+                        val nextPageToken = jsonResponse.optString("next_page_token")
+                        if (!nextPageToken.isNullOrEmpty()) {
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                searchForLocation(query, minCount, maxCount, moveCamera, nextPageToken, accumulatedResults)
+                            }, 2000)                
+                        } else {
+                            runOnUiThread {
+                                if (accumulatedResults.isEmpty()) {
+                                    showNoResultsDialog()
+                                    return@runOnUiThread
                                 }
 
-                                updateReviewCountSummary(clusterRanges)
-                            }
+                                for (place in accumulatedResults) {
+                                Log.d("MainActivity", "Place: ${place.name}, Location: (${place.latLng.latitude}, ${place.latLng.longitude}), Ratings: ${place.userRatingsTotal}")
+                                }
 
-                            // Add map markers
-                            addMarkersToMap(places, clusters, moveCamera)
+                                val reviewList = accumulatedResults.mapNotNull { it.userRatingsTotal }
+                                val (calculateClusters, clusterRanges) = calculateClusters(reviewList)
+                                clusters = calculateClusters
+
+                                if (reviewList.isNotEmpty()) {
+                                    val highestReviews = reviewList.maxOrNull() ?: 0
+                                    val roundedHighestReviews = ceil(highestReviews / 10.0) * 10
+
+                                    reviewCountButton.visibility = View.VISIBLE
+                                    reviewCountSummary.visibility = View.VISIBLE
+
+                                    reviewCountButton.setOnClickListener {
+                                        showSliderDialog(roundedHighestReviews.toInt(), accumulatedResults)
+                                    }
+
+                                    updateReviewCountSummary(clusterRanges)
+                                }
+
+                                // Add map markers
+                                addMarkersToMap(accumulatedResults, clusters, moveCamera)
+                            }
                         }
                     }
                 }
@@ -606,53 +614,3 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
 }
-
-
-        // // State info we want on each place
-        // val placeFields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG, Place.Field.USER_RATINGS_TOTAL)
-
-        // // Get the map's current bounds
-        // val bounds = mMap.projection.visibleRegion.latLngBounds
-
-        // // Format request for the API
-        // val request = SearchByTextRequest.builder(query, placeFields)
-        //     .setLocationRestriction(RectangularBounds.newInstance(bounds))
-        //     .build();
-// // Send request
-//         placesClient.searchByText(request)
-//             .addOnSuccessListener { response ->
-
-//                 Log.d("MainActivity", "Full response: $response")
-                    
-//                 val results = response.places
-
-//                 if(results.isEmpty()) {
-//                     showNoResultsDialog()
-//                     return@addOnSuccessListener
-//                 }
-
-//                 // Display review summary stats
-//                 val reviewList = results.mapNotNull { it.userRatingsTotal }
-//                 val (calculateClusters, clusterRanges) = calculateClusters(reviewList)
-//                 clusters = calculateClusters
-
-//                 if (reviewList.isNotEmpty()) {
-//                     val highestReviews = reviewList.maxOrNull() ?: 0
-//                     val roundedHighestReviews = ceil(highestReviews / 10.0) * 10
-
-//                     reviewCountButton.visibility = View.VISIBLE
-//                     reviewCountSummary.visibility = View.VISIBLE
-
-//                     reviewCountButton.setOnClickListener {
-//                         showSliderDialog(roundedHighestReviews.toInt(), results)
-//                     }
-
-//                     updateReviewCountSummary(clusterRanges)
-//                 }
-
-//                 // Add map markers
-//                 addMarkersToMap(results, clusters, moveCamera)
-
-//             }.addOnFailureListener { exception ->
-//                 Log.e("MainActivity", "Text search failed: ${exception.message}")
-//             }
