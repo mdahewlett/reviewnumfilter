@@ -358,7 +358,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // add review count and category
         val reviewCountTextView = markerView.findViewById<TextView>(R.id.review_count)
         val indicator = when (category) {
-            "S" -> "S "
+            "S" -> "🔥 "
             "H" -> "H "
             "M" -> "M "
             else -> "L "
