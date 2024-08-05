@@ -61,6 +61,7 @@ import okhttp3.Call
 import okhttp3.Response
 import java.io.IOException
 import org.json.JSONObject
+import java.net.URLEncoder
 
 // Filter
 import com.jaygoo.widget.RangeSeekBar
@@ -116,12 +117,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             finish() // closes the activity
             return
         }
-
-        if (!Places.isInitialized()) {
-            Places.initializeWithNewPlacesApiEnabled(applicationContext, apiKey)
-        }
-
-        placesClient = Places.createClient(this)
 
         // Get device location
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
@@ -249,11 +244,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Get the map's current bounds
         val bounds = mMap.projection.visibleRegion.latLngBounds
-        val northeast = bounds.northeast
         val southwest = bounds.southwest
-        val locationBias = "rectangle:${southwest.latitude},${southwest.longitude}|${northeast.latitude},${northeast.longitude}"
+        val northeast = bounds.northeast
+        val center = bounds.center
 
-        val url = "https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query.replace(" ", "+")}&locationbias=$locationBias&key=$apiKey"
+        // Radius is width of viewport
+        val results = FloatArray(1)
+        Location.distanceBetween(
+            southwest.latitude,
+            southwest.longitude,
+            southwest.latitude,
+            northeast.longitude,
+            results
+        )
+        val radius = (results[0] / 2).toInt()
+
+        val url = "https://maps.googleapis.com/maps/api/place/textsearch/json?query=${URLEncoder.encode(query, "UTF-8")}&location=${center.latitude},${center.longitude}&radius=$radius&key=$apiKey"
 
         Log.d("MainActivity", "Request URL: $url")
 
@@ -289,7 +295,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                 userRatingsTotal = result.optInt("user_ratings_total", 0)
                             )
                             places.add(place)
-                        }
+                        }                     
 
                         runOnUiThread {
                             if (places.isEmpty()) {
