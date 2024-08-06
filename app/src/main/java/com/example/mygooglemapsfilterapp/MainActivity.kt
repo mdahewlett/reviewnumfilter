@@ -317,6 +317,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                 Log.d("MainActivity", "Place: ${place.name}, Location: (${place.latLng.latitude}, ${place.latLng.longitude}), Ratings: ${place.userRatingsTotal}")
                                 }
 
+                                accumulatedResults.sortedByDescending { it.userRatingsTotal }
+
                                 val reviewList = accumulatedResults.mapNotNull { it.userRatingsTotal }
                                 val (calculateClusters, clusterRanges) = calculateClusters(reviewList)
                                 clusters = calculateClusters
