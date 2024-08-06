@@ -64,6 +64,9 @@ import android.graphics.Paint
 
 // Misc
 import com.example.mygooglemapsfilterapp.databinding.ActivityMainBinding
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.LayerDrawable
 
 // Filter
 import com.jaygoo.widget.RangeSeekBar
