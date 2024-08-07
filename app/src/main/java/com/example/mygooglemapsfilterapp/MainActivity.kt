@@ -644,10 +644,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         isSuperReviewFilterApplied = !isSuperReviewFilterApplied
 
         if (isSuperReviewFilterApplied) {
-            superReviewButton.setBackgroundColor(ContextCompat.getColor(this, R.color.colorButtonActive))
+            superReviewButton.background = ContextCompat.getDrawable(this, R.drawable.round_active)
             filterReviewsbyCluster(accumulatedResults, "S", clusterRanges)
         } else {
-            superReviewButton.setBackgroundColor(Color.LTGRAY)
+            superReviewButton.background = ContextCompat.getDrawable(this, R.drawable.round_normal)
             addMarkersToMap(accumulatedResults, clusters, moveCamera = false)
         }
     }
