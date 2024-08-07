@@ -99,12 +99,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Reviews
     private lateinit var reviewCountButton: Button
+    private lateinit var superReviewButton: Button
     private lateinit var reviewCountSummary: LinearLayout
     private lateinit var clusters: Map<Int, String>
 
     // Filter
     private var previousMin: Float = 0f
     private var previousMax: Float = 0f
+    private var isSuperReviewFilterApplied = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -133,10 +135,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Initialize views
         searchView = binding.searchView
         reviewCountButton = binding.reviewCountButton
+        superReviewButton = binding.superReviewButton
         reviewCountSummary = binding.reviewCountSummary
         
         // Show/hide elements
         reviewCountButton.visibility = View.GONE
+        superReviewButton.visibility = View.GONE
         reviewCountSummary.visibility = View.GONE
 
         // Search view logic
@@ -328,6 +332,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                     val roundedHighestReviews = ceil(highestReviews / 10.0) * 10
 
                                     reviewCountButton.visibility = View.VISIBLE
+                                    superReviewButton.visibility = View.VISIBLE
                                     reviewCountSummary.visibility = View.VISIBLE
 
                                     reviewCountButton.setOnClickListener {
@@ -335,6 +340,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                     }
 
                                     updateReviewCountSummary(clusterRanges)
+
+                                    superReviewButton.setOnClickListener {
+                                        toggleSuperReviewFilter(accumulatedResults, clusterRanges)
+                                    }
+
                                 }
 
                                 // Add map markers
@@ -415,6 +425,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // Filter logic
     private fun filterReviewsbyCount(results: List<PlaceData>, minCount: Int, maxCount: Int) {
         val filteredResults = results.filter { (it.userRatingsTotal ?: 0) in minCount..maxCount }
+        addMarkersToMap(filteredResults, clusters, moveCamera = false)
+    }
+
+    private fun filterReviewsbyCluster(results: List<PlaceData>, selectedClusterLabel: String, clusterRanges: List<ClusterRange>) {
+        val selectedCluster = clusterRanges.find { it.label == selectedClusterLabel }
+        val filteredResults = if (selectedCluster != null) {
+            results.filter { (it.userRatingsTotal ?: 0) in selectedCluster.min..selectedCluster.max }
+        } else {
+            results
+        }
         addMarkersToMap(filteredResults, clusters, moveCamera = false)
     }
 
@@ -611,11 +631,25 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // Clear filter
     private fun resetReviewFilter() {
         reviewCountButton.visibility = View.GONE
+        superReviewButton.visibility = View.GONE
         reviewCountSummary.visibility = View.GONE
         reviewCountButton.text = "Reviews"
         reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_arrow_drop_down_black, 0)
         previousMin = 0f
         previousMax = 0f
+    }
+
+    //
+    private fun toggleSuperReviewFilter(accumulatedResults: List<PlaceData>, clusterRanges: List<ClusterRange>) {
+        isSuperReviewFilterApplied = !isSuperReviewFilterApplied
+
+        if (isSuperReviewFilterApplied) {
+            superReviewButton.setBackgroundColor(ContextCompat.getColor(this, R.color.colorButtonActive))
+            filterReviewsbyCluster(accumulatedResults, "S", clusterRanges)
+        } else {
+            superReviewButton.setBackgroundColor(Color.LTGRAY)
+            addMarkersToMap(accumulatedResults, clusters, moveCamera = false)
+        }
     }
 
 }
