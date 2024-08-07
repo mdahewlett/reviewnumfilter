@@ -67,6 +67,7 @@ import com.example.mygooglemapsfilterapp.databinding.ActivityMainBinding
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
+import com.google.android.material.progressindicator.CircularProgressIndicator
 
 // Filter
 import com.jaygoo.widget.RangeSeekBar
@@ -248,6 +249,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Search query logic
     private fun searchForLocation(query: String, minCount: Int = 0, maxCount: Int = Int.MAX_VALUE, moveCamera: Boolean = true, pageToken: String? = null, accumulatedResults: MutableList<PlaceData> = mutableListOf()) {
+        // display loading state
+        findViewById<CircularProgressIndicator>(R.id.progress_circular).visibility = View.VISIBLE
+        
         val client = OkHttpClient()
         val apiKey = BuildConfig.PLACES_API_KEY
 
@@ -280,6 +284,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                findViewById<CircularProgressIndicator>(R.id.progress_circular).visibility = View.GONE
                 Log.e("MainActivity", "Text search failed: ${e.message}")
             }
 
@@ -346,6 +351,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                     }
 
                                 }
+
+                                // Hide loading state
+                                findViewById<CircularProgressIndicator>(R.id.progress_circular).visibility = View.GONE
 
                                 // Add map markers
                                 addMarkersToMap(accumulatedResults, clusters, moveCamera)
