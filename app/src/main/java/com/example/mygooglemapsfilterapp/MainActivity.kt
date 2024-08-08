@@ -96,9 +96,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var lastQuery: String
     private lateinit var lastLatLng: LatLng
     private var noResultsDialog: AlertDialog? = null
+
+    // Loading
     private lateinit var loadingStateMessage: LinearLayout
     private lateinit var loadingProgressText: TextView
-    private var fetchCount = 0
+    private lateinit var handler: Handler
+    private lateinit var progressRunnable: Runnable
+    private var loadingState = 0
 
     // Reviews
     private lateinit var reviewCountButton: Button
@@ -149,6 +153,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         reviewCountSummary.visibility = View.GONE
         loadingStateMessage.visibility = View.GONE
 
+        // Loading progress logic
+        handler = Handler(Looper.getMainLooper())
+
+        progressRunnable = Runnable {
+            handler.postDelayed(progressRunnable, 2000)
+            updateLoadingProgress(loadingState)
+            loadingState = (loadingState + 1) % 6
+        }
+
         // Search view logic
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?) : Boolean {
@@ -159,6 +172,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                 lastLatLng = LatLng(it.latitude, it.longitude)
                                 lastQuery = query
                                 resetReviewFilter()
+                                loadingStateMessage.visibility = View.VISIBLE
+                                handler.post(progressRunnable)
                                 searchForLocation(query)
                             }
                         }
@@ -254,6 +269,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Search query logic
     private fun searchForLocation(query: String, minCount: Int = 0, maxCount: Int = Int.MAX_VALUE, moveCamera: Boolean = true, pageToken: String? = null, accumulatedResults: MutableList<PlaceData> = mutableListOf()) {
+
         val client = OkHttpClient()
         val apiKey = BuildConfig.PLACES_API_KEY
 
@@ -294,11 +310,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 if (response.isSuccessful) {
                     val myResponse = response.body?.string()
 
-                    // display loading state
-                    runOnUiThread {
-                        loadingStateMessage.visibility = View.VISIBLE
-                    }
-
                     myResponse?.let {
                         val jsonResponse = JSONObject(it)
                         val results =jsonResponse.getJSONArray("results")
@@ -319,10 +330,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                         val nextPageToken = jsonResponse.optString("next_page_token")
                         if (!nextPageToken.isNullOrEmpty()) {
-                            fetchCount = fetchCount + 1
-                            runOnUiThread {
-                                updateLoadingProgress()
-                            }
                             Handler(Looper.getMainLooper()).postDelayed({
                                 searchForLocation(query, minCount, maxCount, moveCamera, nextPageToken, accumulatedResults)
                             }, 2000)                
@@ -364,8 +371,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                 }
 
                                 // Hide loading state
+                                handler.removeCallbacks(progressRunnable)
                                 loadingStateMessage.visibility = View.GONE
-                                loadingProgressText.text = "✊"
 
                                 // Add map markers
                                 addMarkersToMap(accumulatedResults, clusters, moveCamera)
@@ -673,14 +680,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     //
-    private fun updateLoadingProgress() {
-        if (fetchCount == 1) {
-            loadingProgressText.text = "✊✋"
-        } else if (fetchCount == 2) {
-            loadingProgressText.text = "✊✋✌️"
-        } else {
-            loadingProgressText.text = "✊"
+    private fun updateLoadingProgress(state: Int) {
+        when (state) {
+            0 -> loadingProgressText.text = "🫶"
+            1 -> loadingProgressText.text = "🫶"
+            2 -> loadingProgressText.text = "🫰"
+            3 -> loadingProgressText.text = "🫰"
+            4 -> loadingProgressText.text = "👍"
+            5 -> loadingProgressText.text = "👍"
         }
     }
-
 }
