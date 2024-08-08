@@ -76,7 +76,6 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:18.0.0")
     implementation("com.google.android.gms:play-services-maps:18.0.2")
     implementation("com.google.android.libraries.places:places:3.5.0")
-    implementation("com.google.android.material:material:1.4.0")
     implementation("com.squareup.okhttp3:okhttp:4.9.2")
     implementation("com.github.Jay-Goo:RangeSeekBar:v3.0.0")
     implementation("org.apache.commons:commons-math3:3.6.1")

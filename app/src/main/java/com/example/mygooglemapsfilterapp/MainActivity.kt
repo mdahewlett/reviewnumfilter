@@ -67,7 +67,6 @@ import com.example.mygooglemapsfilterapp.databinding.ActivityMainBinding
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
-import com.google.android.material.progressindicator.CircularProgressIndicator
 
 // Filter
 import com.jaygoo.widget.RangeSeekBar
@@ -97,6 +96,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var lastQuery: String
     private lateinit var lastLatLng: LatLng
     private var noResultsDialog: AlertDialog? = null
+    private lateinit var loadingStateMessage: LinearLayout
+    private lateinit var loadingProgressText: TextView
+    private var fetchCount = 0
 
     // Reviews
     private lateinit var reviewCountButton: Button
@@ -138,11 +140,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         reviewCountButton = binding.reviewCountButton
         superReviewButton = binding.superReviewButton
         reviewCountSummary = binding.reviewCountSummary
+        loadingStateMessage = binding.loadingStateMessage
+        loadingProgressText = binding.loadingProgressText
         
         // Show/hide elements
         reviewCountButton.visibility = View.GONE
         superReviewButton.visibility = View.GONE
         reviewCountSummary.visibility = View.GONE
+        loadingStateMessage.visibility = View.GONE
 
         // Search view logic
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
@@ -249,9 +254,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Search query logic
     private fun searchForLocation(query: String, minCount: Int = 0, maxCount: Int = Int.MAX_VALUE, moveCamera: Boolean = true, pageToken: String? = null, accumulatedResults: MutableList<PlaceData> = mutableListOf()) {
-        // display loading state
-        findViewById<CircularProgressIndicator>(R.id.progress_circular).visibility = View.VISIBLE
-        
         val client = OkHttpClient()
         val apiKey = BuildConfig.PLACES_API_KEY
 
@@ -284,13 +286,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                findViewById<CircularProgressIndicator>(R.id.progress_circular).visibility = View.GONE
+                loadingStateMessage.visibility = View.GONE
                 Log.e("MainActivity", "Text search failed: ${e.message}")
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (response.isSuccessful) {
                     val myResponse = response.body?.string()
+
+                    // display loading state
+                    runOnUiThread {
+                        loadingStateMessage.visibility = View.VISIBLE
+                    }
 
                     myResponse?.let {
                         val jsonResponse = JSONObject(it)
@@ -312,6 +319,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                         val nextPageToken = jsonResponse.optString("next_page_token")
                         if (!nextPageToken.isNullOrEmpty()) {
+                            fetchCount = fetchCount + 1
+                            runOnUiThread {
+                                updateLoadingProgress()
+                            }
                             Handler(Looper.getMainLooper()).postDelayed({
                                 searchForLocation(query, minCount, maxCount, moveCamera, nextPageToken, accumulatedResults)
                             }, 2000)                
@@ -353,7 +364,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                 }
 
                                 // Hide loading state
-                                findViewById<CircularProgressIndicator>(R.id.progress_circular).visibility = View.GONE
+                                loadingStateMessage.visibility = View.GONE
+                                loadingProgressText.text = "✊"
 
                                 // Add map markers
                                 addMarkersToMap(accumulatedResults, clusters, moveCamera)
@@ -657,6 +669,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         } else {
             superReviewButton.background = ContextCompat.getDrawable(this, R.drawable.round_normal)
             addMarkersToMap(accumulatedResults, clusters, moveCamera = false)
+        }
+    }
+
+    //
+    private fun updateLoadingProgress() {
+        if (fetchCount == 1) {
+            loadingProgressText.text = "✊✋"
+        } else if (fetchCount == 2) {
+            loadingProgressText.text = "✊✋✌️"
+        } else {
+            loadingProgressText.text = "✊"
         }
     }
 
