@@ -19,6 +19,7 @@ import android.widget.LinearLayout
 import android.widget.Button
 import android.widget.SearchView
 import android.widget.TextView
+import android.widget.ImageButton
 
 // Androidx libraries
 import androidx.appcompat.app.AppCompatActivity
@@ -89,6 +90,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var mFusedLocationProviderClient: FusedLocationProviderClient
     private val LOCATION_PERMISSION_REQUEST_CODE = 1
     private lateinit var mapFragment: SupportMapFragment
+    private lateinit var myLocationButton: ImageButton
 
     // Search
     private lateinit var searchView: SearchView
@@ -141,6 +143,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Initialize views
         searchView = binding.searchView
+        myLocationButton = binding.myLocationButton
         reviewCountButton = binding.reviewCountButton
         superReviewButton = binding.superReviewButton
         reviewCountSummary = binding.reviewCountSummary
@@ -152,6 +155,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         superReviewButton.visibility = View.GONE
         reviewCountSummary.visibility = View.GONE
         loadingStateMessage.visibility = View.GONE
+
+        // My location button logic
+        myLocationButton.setOnClickListener {
+            moveToCurrentLocation()
+        }
 
         // Loading progress logic
         handler = Handler(Looper.getMainLooper())
@@ -234,26 +242,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Show dot of their location on map
         mMap.isMyLocationEnabled = true
 
+        // Disable the default My Location button
+        mMap.uiSettings.isMyLocationButtonEnabled = false
+
         // Request last location, move camera there
-        mFusedLocationProviderClient.lastLocation
-            .addOnSuccessListener { location: Location? -> 
-            location?.let {
-                val currentLocation = LatLng(it.latitude, it.longitude)
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f))
-            }
-        }
+        moveToCurrentLocation()
 
-        // Move location button to bottom right
-        val locationButtonParent = (mapFragment.view?.findViewById<View>("1".toInt())?.parent as View)
-        
-        // locationButtonParent.background = ContextCompat.getDrawable(this, R.drawable.border) // debug
-
-        val locationButton = locationButtonParent.findViewById<View>("2".toInt())
-        val rlp = locationButton.layoutParams as RelativeLayout.LayoutParams
-        rlp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE)
-        rlp.addRule(RelativeLayout.ALIGN_PARENT_END, RelativeLayout.TRUE)
-        rlp.setMargins(0, 0, 16, 100) // Adjust margins as needed
-        locationButton.layoutParams = rlp
     }
 
     // Location permission logic
@@ -266,6 +260,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 true
             }
         }
+
+    private fun moveToCurrentLocation() {
+        if (checkLocationPermission()) {
+            mFusedLocationProviderClient.lastLocation
+                .addOnSuccessListener { location: Location? -> 
+                location?.let {
+                    val currentLocation = LatLng(it.latitude, it.longitude)
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f))
+                }
+            }
+        }
+    }
 
     // Search query logic
     private fun searchForLocation(query: String, minCount: Int = 0, maxCount: Int = Int.MAX_VALUE, moveCamera: Boolean = true, pageToken: String? = null, accumulatedResults: MutableList<PlaceData> = mutableListOf()) {
