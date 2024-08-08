@@ -1,0 +1,9 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <scale
+            android:drawable="@android:drawable/ic_menu_mylocation"
+            android:scaleGravity="center"
+            android:scaleWidth="150%"
+            android:scaleHeight="150%" />
+    </item>
+</layer-list>

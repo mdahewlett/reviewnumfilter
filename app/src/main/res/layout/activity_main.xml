@@ -14,14 +14,15 @@
     
     <ImageButton
         android:id="@+id/my_location_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:layout_alignParentBottom="true"
         android:layout_alignParentEnd="true"
         android:layout_marginBottom="100dp"
         android:layout_marginRight="16dp"
         android:background="@drawable/rounded_corners"
-        android:src="@android:drawable/ic_menu_mylocation"
+        android:scaleType="centerInside"
+        android:src="@drawable/ic_mylocation_not_centered"
         android:contentDescription="@string/my_location" />
 
     <SearchView

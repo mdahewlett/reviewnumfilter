@@ -91,6 +91,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private val LOCATION_PERMISSION_REQUEST_CODE = 1
     private lateinit var mapFragment: SupportMapFragment
     private lateinit var myLocationButton: ImageButton
+    private var isCameraCentered = false
 
     // Search
     private lateinit var searchView: SearchView
@@ -247,7 +248,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Request last location, move camera there
         moveToCurrentLocation()
-
+        
+        // My location button changes when centered on user
+        mMap.setOnCameraMoveListener {
+            updateButtonState()
+        }
     }
 
     // Location permission logic
@@ -261,13 +266,41 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
 
+    // Return to user location logic
     private fun moveToCurrentLocation() {
         if (checkLocationPermission()) {
             mFusedLocationProviderClient.lastLocation
                 .addOnSuccessListener { location: Location? -> 
                 location?.let {
                     val currentLocation = LatLng(it.latitude, it.longitude)
+                    Log.d("Location", "Current location: $currentLocation")
                     mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f))
+                    isCameraCentered = true
+                    updateButtonState()
+                }
+            }
+        }
+    }
+
+    // myLocationButton display
+    private fun updateButtonState() {
+        if (checkLocationPermission()) {
+            val cameraPosition = mMap.cameraPosition.target
+            Log.d("Location", "Camera position: $cameraPosition")
+            val currentLocation = mFusedLocationProviderClient.lastLocation
+            currentLocation.addOnSuccessListener { location: Location? ->
+                location?.let {
+                    val locationLatLng = LatLng(it.latitude, it.longitude)
+                    Log.d("Location", "User location: $locationLatLng")
+                    
+                    isCameraCentered = Math.abs(cameraPosition.latitude - locationLatLng.latitude) < 0.0001 &&
+                                       Math.abs(cameraPosition.longitude - locationLatLng.longitude) < 0.0001
+                    Log.d("Location", "Is camera centered: $isCameraCentered")
+                    if (isCameraCentered) {
+                        myLocationButton.setImageResource(R.drawable.ic_mylocation_centered)
+                    } else {
+                        myLocationButton.setImageResource(R.drawable.ic_mylocation_not_centered)
+                    }
                 }
             }
         }
