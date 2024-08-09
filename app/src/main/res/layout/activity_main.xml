@@ -20,7 +20,7 @@
         android:layout_alignParentEnd="true"
         android:layout_marginBottom="100dp"
         android:layout_marginRight="16dp"
-        android:background="@drawable/rounded_corners"
+        android:background="@drawable/round_normal"
         android:scaleType="centerInside"
         android:src="@drawable/ic_mylocation_not_centered"
         android:contentDescription="@string/my_location" />

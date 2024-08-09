@@ -247,7 +247,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mMap.uiSettings.isMyLocationButtonEnabled = false
 
         // Request last location, move camera there
-        moveToCurrentLocation()
+        moveToCurrentLocation(15f)
         
         // My location button changes when centered on user
         mMap.setOnCameraMoveListener {
@@ -267,14 +267,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
     // Return to user location logic
-    private fun moveToCurrentLocation() {
+    private fun moveToCurrentLocation(zoom: Float? = null) {
         if (checkLocationPermission()) {
             mFusedLocationProviderClient.lastLocation
                 .addOnSuccessListener { location: Location? -> 
                 location?.let {
                     val currentLocation = LatLng(it.latitude, it.longitude)
                     Log.d("Location", "Current location: $currentLocation")
-                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 15f))
+
+                    val currentZoom = zoom ?: mMap.cameraPosition.zoom
+
+                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, currentZoom))
                     isCameraCentered = true
                     updateButtonState()
                 }
