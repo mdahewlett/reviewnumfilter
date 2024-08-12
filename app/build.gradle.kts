@@ -79,6 +79,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.9.2")
     implementation("com.github.Jay-Goo:RangeSeekBar:v3.0.0")
     implementation("org.apache.commons:commons-math3:3.6.1")
+    implementation("com.google.android.material:material:1.9.0")
 
     // testing
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")

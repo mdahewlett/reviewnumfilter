@@ -12,6 +12,8 @@ import android.view.inputmethod.InputMethodManager
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.util.TypedValue
+import android.view.MotionEvent
 
 // Android components
 import android.widget.RelativeLayout
@@ -20,6 +22,7 @@ import android.widget.Button
 import android.widget.SearchView
 import android.widget.TextView
 import android.widget.ImageButton
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 
 // Androidx libraries
 import androidx.appcompat.app.AppCompatActivity
@@ -118,6 +121,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var previousMax: Float = 0f
     private var isSuperReviewFilterApplied = false
 
+    // Results
+    private lateinit var bottomSheetBehavior: BottomSheetBehavior<LinearLayout>
+
     override fun onCreate(savedInstanceState: Bundle?) {
 
         super.onCreate(savedInstanceState)
@@ -141,6 +147,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Initialize map fragment
         mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
+        // Initialize bottom sheet
+        initBottomSheet()
 
         // Initialize views
         searchView = binding.searchView
@@ -168,7 +177,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         progressRunnable = Runnable {
             handler.postDelayed(progressRunnable, 2000)
             updateLoadingProgress(loadingState)
-            loadingState = (loadingState + 1) % 6
+            loadingState = (loadingState + 1) % 3
         }
 
         // Search view logic
@@ -199,6 +208,60 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
 
                 return false
+            }
+        })
+    }
+
+    // Bottom sheet logic
+    private fun initBottomSheet() {
+        val bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheet)
+        val scrollView = binding.scrollableSection
+        
+        bottomSheetBehavior.isHideable = false
+        bottomSheetBehavior.halfExpandedRatio = 0.66f
+        bottomSheetBehavior.isFitToContents = false
+
+        val topOffset = 60
+        val topOffsetPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, topOffset.toFloat(), resources.displayMetrics)
+        bottomSheetBehavior.expandedOffset = topOffsetPx.toInt()
+
+        // Can drag down from Results section
+        binding.resultsTitle.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                bottomSheetBehavior.isDraggable = true
+            }
+            false
+        }
+
+        // Disable dragging within scroll if scroll not at top
+        scrollView.setOnTouchListener { _, event -> 
+            if (event.action == MotionEvent.ACTION_MOVE && bottomSheetBehavior.state == BottomSheetBehavior.STATE_EXPANDED) {
+                if (scrollView.scrollY > 0) {
+                    bottomSheetBehavior.isDraggable = false
+                } else {
+                    bottomSheetBehavior.isDraggable = true
+                }
+            }
+            false
+        }
+
+        bottomSheetBehavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+            override fun onStateChanged(bottomSheet: View, newState: Int) {
+                when (newState) {
+                    BottomSheetBehavior.STATE_EXPANDED -> {
+                        scrollView.isEnabled = true
+                    }
+                    BottomSheetBehavior.STATE_COLLAPSED -> {
+                        scrollView.isEnabled = false
+                    }
+                    BottomSheetBehavior.STATE_HALF_EXPANDED -> {
+                        scrollView.isEnabled = false
+                    }
+                }
+            }
+
+            override fun onSlide(bottomSheet: View, slideOffset: Float) {
+
             }
         })
     }
@@ -725,11 +788,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun updateLoadingProgress(state: Int) {
         when (state) {
             0 -> loadingProgressText.text = "🫶"
-            1 -> loadingProgressText.text = "🫶"
-            2 -> loadingProgressText.text = "🫰"
-            3 -> loadingProgressText.text = "🫰"
-            4 -> loadingProgressText.text = "👍"
-            5 -> loadingProgressText.text = "👍"
+            1 -> loadingProgressText.text = "🫰"
+            2 -> loadingProgressText.text = "👍"
         }
     }
 }
