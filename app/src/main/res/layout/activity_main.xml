@@ -17,7 +17,7 @@
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_gravity="end|bottom"
-        android:layout_marginBottom="100dp"
+        android:layout_marginBottom="160dp"
         android:layout_marginEnd="16dp"
         android:background="@drawable/round_normal"
         android:scaleType="centerInside"
@@ -33,30 +33,24 @@
         android:queryHint="Seach for places"
         android:iconifiedByDefault="false"
         android:background="@drawable/rounded_corners"/>
-    
-    <LinearLayout
+        
+    <Button 
+        android:id="@+id/super_review_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="start"
-        android:orientation="horizontal"
-        android:layout_marginTop="60dp"
-        android:layout_marginStart="8dp">
-        
-        <Button 
-            android:id="@+id/super_review_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:text="🔥"
-            android:textSize="24sp"
-            android:minWidth="0dp"
-            android:minHeight="0dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
-            android:paddingLeft="6dp"
-            android:paddingRight="6dp"
-            android:background="@drawable/round_normal"/>
-    </LinearLayout>
+        android:layout_gravity="end"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="80dp"
+        android:layout_marginEnd="12dp"
+        android:text="🔥"
+        android:textSize="24sp"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:paddingLeft="6dp"
+        android:paddingRight="6dp"
+        android:background="@drawable/round_normal"/>
 
     <LinearLayout
         android:id="@+id/review_count_summary"
@@ -100,11 +94,11 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="bottom"
-        android:background="@color/colorBackground"
+        android:background="@drawable/rounded_corners"
         android:orientation="vertical"
         android:padding="16dp"
         app:behavior_hideable="false"
-        app:behavior_peekHeight="60dp"
+        app:behavior_peekHeight="120dp"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
 
         <View
@@ -114,20 +108,38 @@
             android:background="@drawable/handle_bar_bg"
             android:layout_marginBottom="8dp"/>
 
-        <TextView
-            android:id="@+id/results_title"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Results"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:paddingBottom="8dp"/>
+            android:orientation="horizontal"
+            android:paddingBottom="8dp">
+
+            <TextView
+                android:id="@+id/results_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Results"
+                android:textSize="24sp"
+                android:textColor="@android:color/black"
+                android:gravity="start"/>
+            
+            <Button
+                android:id="@+id/clear_results_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="X"
+                android:layout_gravity="end"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Clear Results"/>
+        </LinearLayout>
 
         <Button
             android:id="@+id/review_count_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Reviews"
+            android:textAllCaps="false"
             android:drawableRight="@drawable/ic_arrow_drop_down_black"
             android:minWidth="0dp"
             android:minHeight="0dp"

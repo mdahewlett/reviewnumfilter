@@ -80,6 +80,7 @@ import org.apache.commons.math3.ml.clustering.Cluster
 import org.apache.commons.math3.ml.clustering.Clusterable
 import org.apache.commons.math3.ml.clustering.KMeansPlusPlusClusterer
 import org.apache.commons.math3.ml.clustering.DoublePoint
+import android.view.ViewGroup
 
 data class ClusterRange(val label: String, val min: Int, val max: Int)
 
@@ -123,6 +124,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Results
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<LinearLayout>
+    private lateinit var clearResultsButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -216,7 +218,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun initBottomSheet() {
         val bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheet)
         val scrollView = binding.scrollableSection
+        val clearResultsButton = binding.clearResultsButton
         
+        val initialMarginTop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80f, resources.displayMetrics).toInt()
+        val expandedMarginTop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 140f, resources.displayMetrics).toInt()
+
         bottomSheetBehavior.isHideable = false
         bottomSheetBehavior.halfExpandedRatio = 0.66f
         bottomSheetBehavior.isFitToContents = false
@@ -225,7 +231,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val topOffsetPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, topOffset.toFloat(), resources.displayMetrics)
         bottomSheetBehavior.expandedOffset = topOffsetPx.toInt()
 
-        val tolerance = 10
+        clearResultsButton.setOnClickListener {
+            searchView.setQuery("", false)
+        }
 
         // Can drag down from Results section
         binding.resultsTitle.setOnTouchListener { _, event ->
@@ -238,7 +246,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Disable dragging within scroll if scroll not at top
         scrollView.setOnTouchListener { _, event -> 
             if (event.action == MotionEvent.ACTION_MOVE && bottomSheetBehavior.state == BottomSheetBehavior.STATE_EXPANDED) {
-                if (scrollView.scrollY > tolerance) {
+                if (scrollView.scrollY > 0) {
                     bottomSheetBehavior.isDraggable = false
                 } else {
                     bottomSheetBehavior.isDraggable = true
@@ -247,6 +255,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             false
         }
 
+        // Disable result scrolling unless bottom sheet fully expanded
         bottomSheetBehavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
             override fun onStateChanged(bottomSheet: View, newState: Int) {
                 when (newState) {
@@ -263,7 +272,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }
 
             override fun onSlide(bottomSheet: View, slideOffset: Float) {
-
+                if (slideOffset > 0.66) {
+                    // move super filter button to not obscure clear results button
+                    val params = superReviewButton.layoutParams as ViewGroup.MarginLayoutParams
+                    params.topMargin = initialMarginTop + ((expandedMarginTop - initialMarginTop) * (slideOffset - 0.66f) * 3).toInt()
+                    superReviewButton.layoutParams = params
+                }
             }
         })
     }
@@ -794,4 +808,5 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             2 -> loadingProgressText.text = "👍"
         }
     }
+
 }
