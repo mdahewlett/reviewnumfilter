@@ -7,4 +7,5 @@
     <color name="colorButtonActive">#D3E2FD</color>
     <color name="colorBorder">#1A000000</color>
     <color name="colorShadow">#0D000000</color>
+    <color name="lightGray">#F0F0F0</color>
 </resources>

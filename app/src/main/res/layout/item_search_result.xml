@@ -24,6 +24,6 @@
     <View 
         android:layout_width="match_parent"
         android:layout_height="4dp"
-        android:background="#E0E0E0"
+        android:background="@color/lightGray"
         android:layout_marginTop="8dp" />
 </LinearLayout>
