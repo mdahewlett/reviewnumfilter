@@ -124,7 +124,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Results
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<LinearLayout>
-    private lateinit var clearResultsButton: Button
+    private lateinit var clearResultsButton: ImageButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -220,8 +220,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val scrollView = binding.scrollableSection
         val clearResultsButton = binding.clearResultsButton
         
+        // super filter button heights
         val initialMarginTop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80f, resources.displayMetrics).toInt()
-        val expandedMarginTop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 140f, resources.displayMetrics).toInt()
+        val expandedMarginTop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 125f, resources.displayMetrics).toInt()
 
         bottomSheetBehavior.isHideable = false
         bottomSheetBehavior.halfExpandedRatio = 0.66f

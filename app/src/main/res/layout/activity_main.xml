@@ -64,31 +64,6 @@
         android:background="@drawable/rounded_corners">
     </LinearLayout>
 
-
-    <LinearLayout
-        android:id="@+id/loading_state_message"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
-        android:layout_gravity="center"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:background="@drawable/rounded_corners">
-
-        <TextView
-            android:id="@+id/loading_progress_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🫶"
-            android:textSize="48sp"/>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Fetching your results"
-            android:textSize="24sp"
-            android:gravity="center"/>
-    </LinearLayout>
-
     <LinearLayout
         android:id="@+id/bottom_sheet"
         android:layout_width="match_parent"
@@ -124,14 +99,15 @@
                 android:textColor="@android:color/black"
                 android:gravity="start"/>
             
-            <Button
+            <ImageButton
                 android:id="@+id/clear_results_button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="X"
                 android:layout_gravity="end"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Clear Results"/>
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:contentDescription="Clear Results"
+                app:tint="@android:color/black"/>
         </LinearLayout>
 
         <Button
@@ -232,6 +208,30 @@
             </LinearLayout>
         </ScrollView>
         
+    </LinearLayout>
+
+        <LinearLayout
+        android:id="@+id/loading_state_message"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@drawable/rounded_corners">
+
+        <TextView
+            android:id="@+id/loading_progress_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🫶"
+            android:textSize="48sp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Fetching your results"
+            android:textSize="24sp"
+            android:gravity="center"/>
     </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
