@@ -161,8 +161,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         loadingProgressText = binding.loadingProgressText
         
         // Show/hide elements
-        reviewCountButton.visibility = View.GONE
-        superReviewButton.visibility = View.GONE
+        // reviewCountButton.visibility = View.GONE
+        // superReviewButton.visibility = View.GONE
         reviewCountSummary.visibility = View.GONE
         loadingStateMessage.visibility = View.GONE
 
@@ -225,6 +225,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val topOffsetPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, topOffset.toFloat(), resources.displayMetrics)
         bottomSheetBehavior.expandedOffset = topOffsetPx.toInt()
 
+        val tolerance = 10
+
         // Can drag down from Results section
         binding.resultsTitle.setOnTouchListener { _, event ->
             if (event.action == MotionEvent.ACTION_DOWN) {
@@ -236,7 +238,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Disable dragging within scroll if scroll not at top
         scrollView.setOnTouchListener { _, event -> 
             if (event.action == MotionEvent.ACTION_MOVE && bottomSheetBehavior.state == BottomSheetBehavior.STATE_EXPANDED) {
-                if (scrollView.scrollY > 0) {
+                if (scrollView.scrollY > tolerance) {
                     bottomSheetBehavior.isDraggable = false
                 } else {
                     bottomSheetBehavior.isDraggable = true

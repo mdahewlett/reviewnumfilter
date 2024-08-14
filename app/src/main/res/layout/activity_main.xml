@@ -39,24 +39,8 @@
         android:layout_height="wrap_content"
         android:layout_gravity="start"
         android:orientation="horizontal"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="60dp"
         android:layout_marginStart="8dp">
-
-        <Button
-            android:id="@+id/review_count_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Reviews"
-            android:drawableRight="@drawable/ic_arrow_drop_down_black"
-            android:minWidth="0dp"
-            android:minHeight="0dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            android:paddingLeft="10dp"
-            android:paddingRight="8dp"
-            android:background="@drawable/rounded_corners"
-            android:gravity="center"
-            android:layout_gravity="center_vertical"/>
         
         <Button 
             android:id="@+id/super_review_button"
@@ -91,7 +75,7 @@
         android:id="@+id/loading_state_message"
         android:layout_width="200dp"
         android:layout_height="200dp"
-        android:layout_centerInParent="true"
+        android:layout_gravity="center"
         android:orientation="vertical"
         android:gravity="center"
         android:background="@drawable/rounded_corners">
@@ -138,6 +122,22 @@
             android:textSize="24sp"
             android:textStyle="bold"
             android:paddingBottom="8dp"/>
+
+        <Button
+            android:id="@+id/review_count_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reviews"
+            android:drawableRight="@drawable/ic_arrow_drop_down_black"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:paddingLeft="10dp"
+            android:paddingRight="8dp"
+            android:background="@drawable/rounded_corners"
+            android:gravity="center"
+            android:layout_gravity="center_vertical"/>
 
         <ScrollView
             android:id="@+id/scrollable_section"
