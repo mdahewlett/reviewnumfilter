@@ -213,7 +213,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     mMap.clear()
                     resetReviewFilter()
                 }
-
                 return false
             }
         })
@@ -224,18 +223,21 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheet)
         val scrollView = binding.scrollableSection
         
-        // super filter button heights
-        val initialMarginTop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80f, resources.displayMetrics).toInt()
-        val expandedMarginTop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 125f, resources.displayMetrics).toInt()
+        // Button heights
+        val superButtonInitialMarginTop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80f, resources.displayMetrics).toInt()
+        val superButtonExpandedMarginTop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 125f, resources.displayMetrics).toInt()
+        val locationButtonInitialMarginBottom = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 160f, resources.displayMetrics).toInt()
 
+        // Leave space above expanded sheet for search bar
+        val bottomSheetOffset = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 60f, resources.displayMetrics).toInt()
+        bottomSheetBehavior.expandedOffset = bottomSheetOffset
+
+        // Set configurations
         bottomSheetBehavior.isHideable = false
         bottomSheetBehavior.halfExpandedRatio = 0.66f
         bottomSheetBehavior.isFitToContents = false
 
-        val topOffset = 60
-        val topOffsetPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, topOffset.toFloat(), resources.displayMetrics)
-        bottomSheetBehavior.expandedOffset = topOffsetPx.toInt()
-
+        // Clear search, results, and hide bottom sheet
         clearResultsButton.setOnClickListener {
             searchView.setQuery("", false)
             resultsContainer.removeAllViews()
@@ -243,7 +245,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
         }
 
-        // Can drag down from Results section
+        // Can always drag sheet from its top
         binding.resultsTitle.setOnTouchListener { _, event ->
             if (event.action == MotionEvent.ACTION_DOWN) {
                 bottomSheetBehavior.isDraggable = true
@@ -282,9 +284,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             override fun onSlide(bottomSheet: View, slideOffset: Float) {
                 if (slideOffset > 0.66) {
                     // move super filter button to not obscure clear results button
-                    val params = superReviewButton.layoutParams as ViewGroup.MarginLayoutParams
-                    params.topMargin = initialMarginTop + ((expandedMarginTop - initialMarginTop) * (slideOffset - 0.66f) * 3).toInt()
-                    superReviewButton.layoutParams = params
+                    val superButtonParams = superReviewButton.layoutParams as ViewGroup.MarginLayoutParams
+                    superButtonParams.topMargin = superButtonInitialMarginTop + ((superButtonExpandedMarginTop - superButtonInitialMarginTop) * (slideOffset - 0.66f) * 3).toInt()
+                    superReviewButton.layoutParams = superButtonParams
+
+                } else if (slideOffset > 0) {
+                    // move location button with sheet
+                    val locationButtonParams = myLocationButton.layoutParams as ViewGroup.MarginLayoutParams
+                    locationButtonParams.bottomMargin = (bottomSheet.height * slideOffset).toInt() + locationButtonInitialMarginBottom
+                    myLocationButton.layoutParams = locationButtonParams
+
+                    // fade out location button as sheet moves up
+                    myLocationButton.alpha = 1 - slideOffset * 2
+                    myLocationButton.isClickable = myLocationButton.alpha >= 0.99f
                 }
             }
         })
@@ -311,7 +323,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mMap = googleMap
 
         // Enable zoom controls for debugging
-        mMap.uiSettings.isZoomControlsEnabled = true
+        // mMap.uiSettings.isZoomControlsEnabled = true
 
         // If missing existing location permission
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
