@@ -10,7 +10,7 @@
             <corners android:radius="16dp"/>
         </shape>
     </item>
-    <item>
+    <item android:id="@+id/solid_shape">
         <shape android:shape="rectangle">
             <solid android:color="@color/colorBackground"/> 
             <corners android:radius="16dp"/>

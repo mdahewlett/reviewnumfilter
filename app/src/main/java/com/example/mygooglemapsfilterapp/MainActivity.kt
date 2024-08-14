@@ -29,6 +29,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.appcompat.app.AlertDialog
+import androidx.annotation.DrawableRes
+import androidx.annotation.ColorRes
 
 // Google Location Services
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -71,6 +73,7 @@ import com.example.mygooglemapsfilterapp.databinding.ActivityMainBinding
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.LayerDrawable
+import android.graphics.drawable.GradientDrawable
 
 // Filter
 import com.jaygoo.widget.RangeSeekBar
@@ -719,6 +722,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 val roundedMinCount = (floor(minCount / 10.0) * 10).toInt()
                 val roundedMaxCount = (ceil(maxCount / 10.0) * 10).toInt()
                 reviewCountButton.text = "$roundedMinCount - $roundedMaxCount"
+                updateButtonBackground(reviewCountButton, R.drawable.rounded_corners, R.color.colorButtonActive)
                 reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(
                     R.drawable.ic_check, 
                     0, 
@@ -727,6 +731,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 )
             } else {
                 reviewCountButton.text = "Reviews"
+                updateButtonBackground(reviewCountButton, R.drawable.rounded_corners, R.color.colorBackground)
                 reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(
                     0, 
                     0, 
@@ -838,10 +843,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         isSuperReviewFilterApplied = !isSuperReviewFilterApplied
 
         if (isSuperReviewFilterApplied) {
-            superReviewButton.background = ContextCompat.getDrawable(this, R.drawable.round_active)
+            updateButtonBackground(superReviewButton, R.drawable.round_normal, R.color.colorButtonActive)
             filterReviewsbyCluster(accumulatedResults, "S", clusterRanges)
         } else {
-            superReviewButton.background = ContextCompat.getDrawable(this, R.drawable.round_normal)
+            updateButtonBackground(superReviewButton, R.drawable.round_normal, R.color.colorBackground)
             addMarkersToMap(accumulatedResults, clusters, moveCamera = false)
             addResultsToList(accumulatedResults)
         }
@@ -875,5 +880,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             resultsContainer.addView(itemView)
         }
     }
+
+    private fun updateButtonBackground(button: Button, @DrawableRes drawableRes: Int, @ColorRes colorRes: Int) {
+        val layerDrawable = ContextCompat.getDrawable(this, drawableRes) as LayerDrawable
+        val solidShape = layerDrawable.findDrawableByLayerId(R.id.solid_shape) as GradientDrawable
+        solidShape.setColor(ContextCompat.getColor(this, colorRes))
+        button.background = layerDrawable
+    }
+
 
 }
