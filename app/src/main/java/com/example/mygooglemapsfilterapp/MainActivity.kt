@@ -123,6 +123,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var isSuperReviewFilterApplied = false
 
     // Results
+    private lateinit var bottomSheet: LinearLayout
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<LinearLayout>
     private lateinit var clearResultsButton: ImageButton
     private lateinit var resultsContainer: LinearLayout
@@ -161,6 +162,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         loadingProgressText = binding.loadingProgressText
         resultsContainer = binding.resultsContainer
         clearResultsButton = binding.clearResultsButton
+        bottomSheet = binding.bottomSheet
 
         // Initialize bottom sheet
         initBottomSheet()
@@ -236,6 +238,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         clearResultsButton.setOnClickListener {
             searchView.setQuery("", false)
+            resultsContainer.removeAllViews()
+            bottomSheet.visibility = View.GONE
+            bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
         }
 
         // Can drag down from Results section
@@ -502,7 +507,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                 addMarkersToMap(accumulatedResults, clusters, moveCamera)
 
                                 // Add places to results list
-                                displaySearchResults(accumulatedResults)
+                                addResultsToList(accumulatedResults)
+
+                                // Display results bottom sheet
+                                bottomSheet.visibility = View.VISIBLE
                             }
                         }
                     }
@@ -580,6 +588,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun filterReviewsbyCount(results: List<PlaceData>, minCount: Int, maxCount: Int) {
         val filteredResults = results.filter { (it.userRatingsTotal ?: 0) in minCount..maxCount }
         addMarkersToMap(filteredResults, clusters, moveCamera = false)
+        addResultsToList(filteredResults)
     }
 
     private fun filterReviewsbyCluster(results: List<PlaceData>, selectedClusterLabel: String, clusterRanges: List<ClusterRange>) {
@@ -590,6 +599,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             results
         }
         addMarkersToMap(filteredResults, clusters, moveCamera = false)
+        addResultsToList(filteredResults)
     }
 
     // Slider dialog logic
@@ -793,7 +803,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         previousMax = 0f
     }
 
-    //
+    // super review filter logic
     private fun toggleSuperReviewFilter(accumulatedResults: List<PlaceData>, clusterRanges: List<ClusterRange>) {
         isSuperReviewFilterApplied = !isSuperReviewFilterApplied
 
@@ -803,6 +813,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         } else {
             superReviewButton.background = ContextCompat.getDrawable(this, R.drawable.round_normal)
             addMarkersToMap(accumulatedResults, clusters, moveCamera = false)
+            addResultsToList(accumulatedResults)
         }
     }
 
@@ -816,7 +827,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     // Search results list logic
-    private fun displaySearchResults(results: List<PlaceData>) {
+    private fun addResultsToList(results: List<PlaceData>) {
         
         // clear existing views
         resultsContainer.removeAllViews()
