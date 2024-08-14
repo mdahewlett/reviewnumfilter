@@ -125,6 +125,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // Results
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<LinearLayout>
     private lateinit var clearResultsButton: ImageButton
+    private lateinit var resultsContainer: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -150,9 +151,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
-        // Initialize bottom sheet
-        initBottomSheet()
-
         // Initialize views
         searchView = binding.searchView
         myLocationButton = binding.myLocationButton
@@ -161,7 +159,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         reviewCountSummary = binding.reviewCountSummary
         loadingStateMessage = binding.loadingStateMessage
         loadingProgressText = binding.loadingProgressText
-        
+        resultsContainer = binding.resultsContainer
+        clearResultsButton = binding.clearResultsButton
+
+        // Initialize bottom sheet
+        initBottomSheet()
+
         // Show/hide elements
         // reviewCountButton.visibility = View.GONE
         // superReviewButton.visibility = View.GONE
@@ -218,7 +221,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun initBottomSheet() {
         val bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheet)
         val scrollView = binding.scrollableSection
-        val clearResultsButton = binding.clearResultsButton
         
         // super filter button heights
         val initialMarginTop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80f, resources.displayMetrics).toInt()
@@ -498,6 +500,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                                 // Add map markers
                                 addMarkersToMap(accumulatedResults, clusters, moveCamera)
+
+                                // Add places to results list
+                                displaySearchResults(accumulatedResults)
                             }
                         }
                     }
@@ -807,6 +812,26 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             0 -> loadingProgressText.text = "🫶"
             1 -> loadingProgressText.text = "🫰"
             2 -> loadingProgressText.text = "👍"
+        }
+    }
+
+    // Search results list logic
+    private fun displaySearchResults(results: List<PlaceData>) {
+        
+        // clear existing views
+        resultsContainer.removeAllViews()
+
+        var inflater = LayoutInflater.from(this)
+        for (result in results) {
+            val itemView = inflater.inflate(R.layout.item_search_result, resultsContainer, false)
+
+            val placeNameTextView = itemView.findViewById<TextView>(R.id.place_name)
+            val reviewCountTextView = itemView.findViewById<TextView>(R.id.review_count)
+
+            placeNameTextView.text = result.name
+            reviewCountTextView.text = "${result.userRatingsTotal} reviews"
+
+            resultsContainer.addView(itemView)
         }
     }
 
