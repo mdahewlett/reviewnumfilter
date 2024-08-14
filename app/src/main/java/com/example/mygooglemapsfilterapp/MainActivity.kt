@@ -23,6 +23,7 @@ import android.widget.SearchView
 import android.widget.TextView
 import android.widget.ImageButton
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import android.widget.ScrollView
 
 // Androidx libraries
 import androidx.appcompat.app.AppCompatActivity
@@ -128,9 +129,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // Results
     private lateinit var bottomSheet: LinearLayout
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<LinearLayout>
-    private lateinit var clearResultsButton: ImageButton
-    private lateinit var resultsContainer: LinearLayout
     private var isBottomSheetVisible = false
+    private lateinit var resultsTitle: TextView
+    private lateinit var clearResultsButton: ImageButton
+    private lateinit var scrollView: ScrollView
+    private lateinit var resultsContainer: LinearLayout
+    private lateinit var placeDetailsLayout: LinearLayout
+    private lateinit var placeDetailsView: TextView
+    private lateinit var backToResultsButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -164,9 +170,14 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         reviewCountSummary = binding.reviewCountSummary
         loadingStateMessage = binding.loadingStateMessage
         loadingProgressText = binding.loadingProgressText
+        bottomSheet = binding.bottomSheet
+        resultsTitle = binding.resultsTitle
+        scrollView = binding.scrollableSection
         resultsContainer = binding.resultsContainer
         clearResultsButton = binding.clearResultsButton
-        bottomSheet = binding.bottomSheet
+        placeDetailsLayout = binding.placeDetailsLayout
+        placeDetailsView = binding.placeDetailsView
+        backToResultsButton = binding.backToResultsButton
 
         // Initialize bottom sheet
         initBottomSheet()
@@ -197,6 +208,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // My location button logic
         myLocationButton.setOnClickListener {
             moveToCurrentLocation()
+        }
+
+        backToResultsButton.setOnClickListener {
+            resultsTitle.text = "Results"
+
+            reviewCountButton.visibility = View.VISIBLE
+            superReviewButton.visibility = View.VISIBLE
+            scrollView.visibility = View.VISIBLE
+
+            placeDetailsLayout.visibility = View.GONE
+
         }
 
         // Loading progress logic
@@ -242,7 +264,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // Bottom sheet logic
     private fun initBottomSheet() {
         val bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheet)
-        val scrollView = binding.scrollableSection
         
         // Button heights
         val superButtonInitialMarginTop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80f, resources.displayMetrics).toInt()
@@ -267,7 +288,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         // Can always drag sheet from its top
-        binding.resultsTitle.setOnTouchListener { _, event ->
+        resultsTitle.setOnTouchListener { _, event ->
             if (event.action == MotionEvent.ACTION_DOWN) {
                 bottomSheetBehavior.isDraggable = true
             }
@@ -877,6 +898,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             placeNameTextView.text = result.name
             reviewCountTextView.text = "${result.userRatingsTotal} reviews"
 
+            itemView.setOnClickListener {
+                showPlaceDetails(result)
+            }
+
             resultsContainer.addView(itemView)
         }
     }
@@ -886,6 +911,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val solidShape = layerDrawable.findDrawableByLayerId(R.id.solid_shape) as GradientDrawable
         solidShape.setColor(ContextCompat.getColor(this, colorRes))
         button.background = layerDrawable
+    }
+
+    private fun showPlaceDetails(place: PlaceData) {
+        resultsTitle.text = place.name
+
+        reviewCountButton.visibility = View.GONE
+        superReviewButton.visibility = View.GONE
+        scrollView.visibility = View.GONE
+
+
+        placeDetailsLayout.visibility = View.VISIBLE
+
+        placeDetailsView.text = "${place.userRatingsTotal} reviews"
     }
 
 
