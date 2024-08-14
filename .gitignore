@@ -62,3 +62,4 @@ crashlytics.properties
 # Windows
 thumbs.db
 ehthumbs.db
+*.hprof
