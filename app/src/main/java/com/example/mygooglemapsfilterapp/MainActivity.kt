@@ -127,6 +127,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<LinearLayout>
     private lateinit var clearResultsButton: ImageButton
     private lateinit var resultsContainer: LinearLayout
+    private var isBottomSheetVisible = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -166,6 +167,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Initialize bottom sheet
         initBottomSheet()
+
+        bottomSheet.viewTreeObserver.addOnGlobalLayoutListener {
+            val locationButtonParams = myLocationButton.layoutParams as ViewGroup.MarginLayoutParams
+            val locationButtonDefaultMarginBottom = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 40f, resources.displayMetrics).toInt()
+            val locationButtonInitialMarginBottom = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 160f, resources.displayMetrics).toInt()
+            
+            val isVisible = bottomSheet.visibility == View.VISIBLE
+            if (isVisible != isBottomSheetVisible) {
+                if (!isVisible) {
+                    locationButtonParams.bottomMargin = locationButtonDefaultMarginBottom
+                } else {
+                    locationButtonParams.bottomMargin = locationButtonInitialMarginBottom
+                }
+                myLocationButton.layoutParams = locationButtonParams
+                isBottomSheetVisible = isVisible
+            }
+        }
 
         // Show/hide elements
         // reviewCountButton.visibility = View.GONE
@@ -227,7 +245,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val superButtonInitialMarginTop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80f, resources.displayMetrics).toInt()
         val superButtonExpandedMarginTop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 125f, resources.displayMetrics).toInt()
         val locationButtonInitialMarginBottom = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 160f, resources.displayMetrics).toInt()
-
+        
         // Leave space above expanded sheet for search bar
         val bottomSheetOffset = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 60f, resources.displayMetrics).toInt()
         bottomSheetBehavior.expandedOffset = bottomSheetOffset
