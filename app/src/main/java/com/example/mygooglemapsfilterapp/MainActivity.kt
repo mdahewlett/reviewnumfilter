@@ -180,6 +180,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         backToResultsButton = binding.backToResultsButton
 
         // Initialize bottom sheet
+         bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheet)
         initBottomSheet()
 
         bottomSheet.viewTreeObserver.addOnGlobalLayoutListener {
@@ -200,8 +201,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         // Show/hide elements
-        // reviewCountButton.visibility = View.GONE
-        // superReviewButton.visibility = View.GONE
+        reviewCountButton.visibility = View.GONE
+        superReviewButton.visibility = View.GONE
         reviewCountSummary.visibility = View.GONE
         loadingStateMessage.visibility = View.GONE
 
@@ -263,7 +264,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Bottom sheet logic
     private fun initBottomSheet() {
-        val bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheet)
         
         // Button heights
         val superButtonInitialMarginTop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80f, resources.displayMetrics).toInt()
@@ -899,6 +899,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             reviewCountTextView.text = "${result.userRatingsTotal} reviews"
 
             itemView.setOnClickListener {
+                bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
                 showPlaceDetails(result)
             }
 
