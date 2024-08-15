@@ -249,7 +249,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                 lastQuery = query
                                 resetReviewFilter()
                                 showResultsView()
-                                // bottomSheet.visibility = View.GONE
                                 loadingStateMessage.visibility = View.VISIBLE
                                 handler.post(progressRunnable)
                                 searchForLocation(query)
@@ -263,8 +262,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             // reset features when user clears search field
             override fun onQueryTextChange(newText: String?): Boolean {
                 if (newText.isNullOrEmpty()) {                    
-                    mMap.clear()
-                    resetReviewFilter()
                 }
                 return false
             }
@@ -290,9 +287,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Clear search, results, and hide bottom sheet
         clearResultsButton.setOnClickListener {
-            showResultsView()
+            mMap.clear()
             searchView.setQuery("", false)
             resultsContainer.removeAllViews()
+            resetReviewFilter()
+            showResultsView()
             bottomSheet.visibility = View.GONE
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
         }
@@ -554,19 +553,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                 if (reviewList.isNotEmpty()) {
                                     val highestReviews = reviewList.maxOrNull() ?: 0
                                     val roundedHighestReviews = ceil(highestReviews / 10.0) * 10
-
-                                    showFilters()
-                                    reviewCountSummary.visibility = View.VISIBLE
-
+                                    
+                                    // Configure review count views
+                                    updateReviewCountSummary(clusterRanges)
                                     reviewCountButton.setOnClickListener {
                                         showSliderDialog(roundedHighestReviews.toInt(), accumulatedResults)
                                     }
-
-                                    updateReviewCountSummary(clusterRanges)
-
                                     superReviewButton.setOnClickListener {
                                         toggleSuperReviewFilter(accumulatedResults, clusterRanges)
                                     }
+
+                                    // Show review count views
+                                    showFilters()
+                                    reviewCountSummary.visibility = View.VISIBLE
 
                                 }
 
@@ -878,22 +877,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             .setCancelable(true)
             .create()
         
-        if (dialog.isShowing == true) {
-            Log.d("MainActivity", "No results dialog already showing")
-            return
-        }
+-        if (dialog.isShowing == true) {
+-            Log.d("MainActivity", "No results dialog already showing")
+-            return
+-        }
+-
+         closeButton.setOnClickListener {
+-            Log.d("MainActivity", "Close button clicked")
+             searchView.setQuery("", false)
+             searchView.clearFocus()
+-            Log.d("MainActivity", "Search cleared")
+             dialog.dismiss()
+-            Log.d("MainActivity", "Dialog dismissed")
+         }
+ 
+         dialog.show()
+-        Log.d("MainActivity", "No results dialog opened")
 
-        closeButton.setOnClickListener {
-            Log.d("MainActivity", "Close button clicked")
-            searchView.setQuery("", false)
-            searchView.clearFocus()
-            Log.d("MainActivity", "Search cleared")
-            dialog.dismiss()
-            Log.d("MainActivity", "Dialog dismissed")
-        }
-
-        dialog.show()
-        Log.d("MainActivity", "No results dialog opened")
     }
 
     // Clear filter
@@ -1003,14 +1003,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun updateMarkers(marker: Marker, isSelected: Boolean) {
-        
         resetSelectedMarker()
-
         if (isSelected) {
             updateMarkerIcon(marker, true)
             selectedMarker = marker
         }
-
     }
 
     private fun resetSelectedMarker() {
