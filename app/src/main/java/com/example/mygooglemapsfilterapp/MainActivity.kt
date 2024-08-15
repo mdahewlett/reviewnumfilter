@@ -102,6 +102,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var myLocationButton: ImageButton
     private var isCameraCentered = false
     private val markerPlaceMap = mutableMapOf<Marker, PlaceData>()
+    private var selectedMarker: Marker? = null
 
     // Search
     private lateinit var searchView: SearchView
@@ -222,6 +223,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             scrollView.visibility = View.VISIBLE
 
             placeDetailsLayout.visibility = View.GONE
+
+            resetSelectedMarker()
 
         }
 
@@ -400,9 +403,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         mMap.setOnMarkerClickListener { marker ->
             
-            markerPlaceMap.keys.forEach { updateMarkerStyle(it, isSelected = false) }
+            markerPlaceMap.keys.forEach { updateMarkers(it, isSelected = false) }
 
-            updateMarkerStyle(marker, isSelected = true)
+            updateMarkers(marker, isSelected = true)
 
             val place = markerPlaceMap[marker]
             place?.let {
@@ -542,6 +545,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                                 //debug
                                 Log.d("MainActivity", "Clusters: $clusters")
+                                Log.d("MainActivity", "Cluster ranges: $clusterRanges")
 
                                 if (reviewList.isNotEmpty()) {
                                     val highestReviews = reviewList.maxOrNull() ?: 0
@@ -749,9 +753,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             val minCount = rangeSlider.leftSeekBar.progress.toInt()
             val maxCount = rangeSlider.rightSeekBar.progress.toInt()
 
-            Log.d("MainActivity", "Filtering with minCount: $minCount, maxCount: $maxCount")
-            Log.d("MainActivity", "Clusters: $clusters")
-
             filterReviewsbyCount(results, minCount, maxCount)
 
             // display selected range
@@ -788,31 +789,44 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             return Pair(mapOf(), listOf())
         }
 
+        // Convert each review count to a double inside an array and put them in a list
         val points = reviewCounts.map { DoublePoint(doubleArrayOf(it.toDouble())) }
+        
+        // Pick the algorithm that will cluster
         val clusterer = KMeansPlusPlusClusterer<DoublePoint>(numClusters)
+
+        // Tell the clerk how I want the groups bagged, then getting them to group and bag
         val clusters: List<Cluster<DoublePoint>> = clusterer.cluster(points)
 
+        // Make a list of the average value of each cluster
         val centroids = clusters.map { cluster ->
         cluster.points.map { it.point[0] }.average()
         }
 
+        // pair the list of averages with the list of clusters, then order that list of pairs from highest average to lowest
         val sortedClusters = centroids.zip(clusters).sortedByDescending { it.first }
 
+        // prepare containers
         val labels = listOf("S", "H", "M", "L")
-
         val clusterMap = mutableMapOf<Int, String>()
         val clusterRanges = mutableListOf<ClusterRange>()
 
+        // take the centroid-cluster pairs and pair them with an index
         for ((index, pair) in sortedClusters.withIndex()) {
             val cluster = pair.second
             val label = labels[index]
+
+            // minof and maxof iterate through the list of points and do their action without an intermediate list
             val min = cluster.points.minOf { it.point[0].toInt() }
             val max = cluster.points.maxOf { it.point[0].toInt() }
             val roundedMin = (min / 100) * 100
             val roundedMax = ((max + 99) / 100) * 100
+
+            // as a list, items are added to the end
             clusterRanges.add(ClusterRange(label, roundedMin, roundedMax))
 
             for (point in cluster.points) {
+                // as a map, keys are updated with values and if the key is new, it is added
                 clusterMap[point.point[0].toInt()] = label
             }
         }
@@ -823,10 +837,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun updateReviewCountSummary(clusterRanges: List<ClusterRange>) {
         reviewCountSummary.removeAllViews()
 
+        // Sort the ranges to appear top to bottom high to low
         val labelOrder = listOf("S", "H", "M", "L")
-
         val sortedRanges = clusterRanges.sortedBy { labelOrder.indexOf(it.label) }
 
+        // Fill & display each range
         for (range in sortedRanges) {
             val textView = TextView(this)
             textView.text = "${range.label}: ${range.min} - ${range.max}"
@@ -932,13 +947,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun showPlaceDetails(place: PlaceData) {
         // Highlight that place's marker
         markerPlaceMap.keys.forEach { marker ->
-            updateMarkerStyle(marker, isSelected = false)
+            updateMarkers(marker, isSelected = false)
             }
 
         val selectedMarker = markerPlaceMap.entries.find { it.value.id == place.id }?.key
 
         selectedMarker?.let {
-            updateMarkerStyle(it, isSelected = true)
+            updateMarkers(it, isSelected = true)
         }
         
         // Update bottom sheet content
@@ -950,16 +965,32 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         placeDetailsView.text = "${place.userRatingsTotal} reviews"
     }
 
-    private fun updateMarkerStyle(marker: Marker, isSelected: Boolean) {
+    private fun updateMarkers(marker: Marker, isSelected: Boolean) {
+        
+        resetSelectedMarker()
+
+        if (isSelected) {
+            updateMarkerIcon(marker, true)
+            selectedMarker = marker
+        }
+
+    }
+
+    private fun resetSelectedMarker() {
+        selectedMarker?.let {
+            updateMarkerIcon(it, isSelected = false)
+            selectedMarker = null
+        }
+    }
+    
+    private fun updateMarkerIcon(marker: Marker, isSelected: Boolean) {
         val place = markerPlaceMap[marker]
-
-
         place?.let {
-            val reviews = place.userRatingsTotal ?: 0
+            val reviews = it.userRatingsTotal ?: 0
             val category = clusters[reviews] ?: "Low"
             val customMarker = createCustomMarker(this, it.userRatingsTotal, category, isSelected)
             marker.setIcon(customMarker)
         }
     }
-    
+
 }
