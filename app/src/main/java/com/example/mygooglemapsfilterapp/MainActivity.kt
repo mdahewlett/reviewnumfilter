@@ -138,7 +138,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var scrollView: ScrollView
     private lateinit var resultsContainer: LinearLayout
     private lateinit var placeDetailsLayout: LinearLayout
-    private lateinit var placeDetailsView: TextView
+    private lateinit var placeCategoryReviewsRatingView: TextView
+    private lateinit var placeAddressView: TextView
+    private lateinit var placeHoursView: TextView
+    private lateinit var placePriceView: TextView
     private lateinit var backToResultsButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -179,7 +182,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         resultsContainer = binding.resultsContainer
         clearResultsButton = binding.clearResultsButton
         placeDetailsLayout = binding.placeDetailsLayout
-        placeDetailsView = binding.placeDetailsView
+        placeCategoryReviewsRatingView = binding.placeCategoryReviewsRatingView
+        placeAddressView = binding.placeAddressView
+        placeHoursView = binding.placeHoursView
+        placePriceView = binding.placePriceView
+
         backToResultsButton = binding.backToResultsButton
 
         // Initialize bottom sheet
@@ -204,6 +211,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         // Show/hide elements
+        bottomSheet.visibility = View.GONE
         reviewCountButton.visibility = View.GONE
         superReviewButton.visibility = View.GONE
         reviewCountSummary.visibility = View.GONE
@@ -519,7 +527,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                     result.getJSONObject("geometry").getJSONObject("location").getDouble("lat"),
                                     result.getJSONObject("geometry").getJSONObject("location").getDouble("lng")
                                 ),
-                                userRatingsTotal = result.optInt("user_ratings_total", 0)
+                                userRatingsTotal = result.optInt("user_ratings_total", 0),
+                                avgRating = result.optDouble("rating", 0.0),
+                                address = result.optString("formatted_address"),
+                                hours = result.optJSONObject("opening_hours").optBoolean("open_now", false),
+                                priceLevel = result.optInt("price_level", 0)
                             )
                             accumulatedResults.add(place)
                         }
@@ -542,10 +554,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                 val reviewList = accumulatedResults.mapNotNull { it.userRatingsTotal }
                                 val (calculateClusters, clusterRanges) = calculateClusters(reviewList)
                                 clusters = calculateClusters
-
-                                //debug
-                                Log.d("MainActivity", "Clusters: $clusters")
-                                Log.d("MainActivity", "Cluster ranges: $clusterRanges")
 
                                 if (reviewList.isNotEmpty()) {
                                     val highestReviews = reviewList.maxOrNull() ?: 0
@@ -591,7 +599,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val id: String,
         val name: String,
         val latLng: LatLng,
-        val userRatingsTotal: Int
+        val userRatingsTotal: Int?,
+        val avgRating: Double?,
+        val address: String?,
+        val hours: Boolean?,
+        val priceLevel: Int?
     )
 
     // Custom marker logic
@@ -645,7 +657,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             val category = clusters[reviews] ?: "Low"
             if (latLng != null) {
                 val isSelected = false
-                val customMarker = createCustomMarker(this, reviews, category)
+                val customMarker = createCustomMarker(this, reviews, category, isSelected)
                 val marker = mMap.addMarker(MarkerOptions().position(latLng).title(place.name).icon(customMarker))
                 markerPlaceMap[marker!!] = place
                 boundsBuilder.include(latLng)
@@ -956,13 +968,32 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             updateMarkers(it, isSelected = true)
         }
         
-        // Update bottom sheet content
+        val reviews = place.userRatingsTotal ?: 0
+        val category = clusters[reviews] ?: "Low"
+        val ratingText = place.avgRating?.toString() ?: ""
+
+        // Insert values
         resultsTitle.text = place.name
+        placeCategoryReviewsRatingView.text = "$category $reviews (⭐️$ratingText)"
+        placeAddressView.text = place.address ?: "Address not available"
+        placeHoursView.text = when (place.hours) {
+            true -> "Open"
+            false -> "Closed"
+            else -> "Unclear if this place is open or closed right now"
+        }
+        placePriceView.text = when (place.priceLevel) {
+            0 -> "$"
+            1 -> "$$"
+            2 -> "$$$"
+            3 -> "$$$$"
+            else -> "Price not available"
+        }
+
+        // Hide/show views
         reviewCountButton.visibility = View.GONE
         superReviewButton.visibility = View.GONE
         scrollView.visibility = View.GONE
         placeDetailsLayout.visibility = View.VISIBLE
-        placeDetailsView.text = "${place.userRatingsTotal} reviews"
     }
 
     private fun updateMarkers(marker: Marker, isSelected: Boolean) {
@@ -988,7 +1019,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         place?.let {
             val reviews = it.userRatingsTotal ?: 0
             val category = clusters[reviews] ?: "Low"
-            val customMarker = createCustomMarker(this, it.userRatingsTotal, category, isSelected)
+            val customMarker = createCustomMarker(this, it.userRatingsTotal ?: 0, category, isSelected)
             marker.setIcon(customMarker)
         }
     }
