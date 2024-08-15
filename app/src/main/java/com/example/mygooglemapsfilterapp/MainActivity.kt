@@ -224,16 +224,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Back to results button - debugging button
         backToResultsButton.setOnClickListener {
-            resultsTitle.text = "Results"
-
-            reviewCountButton.visibility = View.VISIBLE
-            superReviewButton.visibility = View.VISIBLE
-            scrollView.visibility = View.VISIBLE
-
-            placeDetailsLayout.visibility = View.GONE
-
-            resetSelectedMarker()
-
+            showResultsView()
         }
 
         // Loading progress logic
@@ -255,6 +246,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                 lastLatLng = LatLng(it.latitude, it.longitude)
                                 lastQuery = query
                                 resetReviewFilter()
+                                showResultsView()
+                                // bottomSheet.visibility = View.GONE
                                 loadingStateMessage.visibility = View.VISIBLE
                                 handler.post(progressRunnable)
                                 searchForLocation(query)
@@ -295,6 +288,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Clear search, results, and hide bottom sheet
         clearResultsButton.setOnClickListener {
+            showResultsView()
             searchView.setQuery("", false)
             resultsContainer.removeAllViews()
             bottomSheet.visibility = View.GONE
@@ -530,7 +524,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                 userRatingsTotal = result.optInt("user_ratings_total", 0),
                                 avgRating = result.optDouble("rating", 0.0),
                                 address = result.optString("formatted_address"),
-                                hours = result.optJSONObject("opening_hours").optBoolean("open_now", false),
+                                hours = result.optJSONObject("opening_hours")?.optBoolean("open_now", false),
                                 priceLevel = result.optInt("price_level", 0)
                             )
                             accumulatedResults.add(place)
@@ -796,55 +790,64 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         dialog.show()
     }
 
-    fun calculateClusters(reviewCounts: List<Int>, numClusters: Int = 4): Pair<Map<Int, String>, List<ClusterRange>> {
-        if (reviewCounts.isEmpty()) {
-            return Pair(mapOf(), listOf())
-        }
-
-        // Convert each review count to a double inside an array and put them in a list
-        val points = reviewCounts.map { DoublePoint(doubleArrayOf(it.toDouble())) }
-        
-        // Pick the algorithm that will cluster
-        val clusterer = KMeansPlusPlusClusterer<DoublePoint>(numClusters)
-
-        // Tell the clerk how I want the groups bagged, then getting them to group and bag
-        val clusters: List<Cluster<DoublePoint>> = clusterer.cluster(points)
-
-        // Make a list of the average value of each cluster
-        val centroids = clusters.map { cluster ->
-        cluster.points.map { it.point[0] }.average()
-        }
-
-        // pair the list of averages with the list of clusters, then order that list of pairs from highest average to lowest
-        val sortedClusters = centroids.zip(clusters).sortedByDescending { it.first }
-
-        // prepare containers
-        val labels = listOf("S", "H", "M", "L")
+   fun calculateClusters(reviewCounts: List<Int>, numClusters: Int = 4): Pair<Map<Int, String>, List<ClusterRange>> {
+        val clusterLabels = listOf("S", "H", "M", "L")
         val clusterMap = mutableMapOf<Int, String>()
         val clusterRanges = mutableListOf<ClusterRange>()
 
-        // take the centroid-cluster pairs and pair them with an index
-        for ((index, pair) in sortedClusters.withIndex()) {
-            val cluster = pair.second
-            val label = labels[index]
+    // No results
+    if (reviewCounts.isEmpty()) {
+        Log.d("calculateClusters", "Review counts are empty.")
+        return Pair(mapOf(), listOf())
+    }
 
-            // minof and maxof iterate through the list of points and do their action without an intermediate list
-            val min = cluster.points.minOf { it.point[0].toInt() }
-            val max = cluster.points.maxOf { it.point[0].toInt() }
-            val roundedMin = (min / 100) * 100
-            val roundedMax = ((max + 99) / 100) * 100
-
-            // as a list, items are added to the end
-            clusterRanges.add(ClusterRange(label, roundedMin, roundedMax))
-
-            for (point in cluster.points) {
-                // as a map, keys are updated with values and if the key is new, it is added
-                clusterMap[point.point[0].toInt()] = label
-            }
-        }
-
+    // Some results, but too few to cluster
+    if (reviewCounts.size < numClusters) {
+        Log.d("calculateClusters", "Not enough points to create $numClusters clusters.")
+        val clusterMap = reviewCounts.associateWith { "M" }
+        val clusterRanges = listOf(ClusterRange("M", reviewCounts.minOrNull() ?: 0, reviewCounts.maxOrNull() ?: 0))
         return Pair(clusterMap, clusterRanges)
     }
+
+    // Convert review numbers to points for the clustering algorithm
+    val points = reviewCounts.map { DoublePoint(doubleArrayOf(it.toDouble())) }
+    
+    // Select the clustering algorithm
+    val clusterer = KMeansPlusPlusClusterer<DoublePoint>(numClusters)
+    
+    // Run the algorithm, sorting points into clusters
+    val clusters: List<Cluster<DoublePoint>> = clusterer.cluster(points)
+
+    // Get the average of each cluster
+    val centroids = clusters.map { cluster ->
+        cluster.points.map { it.point[0] }.average()
+    }
+
+    // Sort cluster by their average
+    val sortedClusters = centroids.zip(clusters).sortedByDescending { it.first }
+
+    for ((index, pair) in sortedClusters.withIndex()) {
+        val cluster = pair.second
+        val clusterLabel = clusterLabels[index]
+
+        // Calculate each cluster's range
+        val min = cluster.points.minOfOrNull { it.point[0].toInt() } ?: 0
+        val max = cluster.points.maxOfOrNull { it.point[0].toInt() } ?: 0
+        val roundedMin = (min / 100) * 100
+        val roundedMax = ((max + 99) / 100) * 100
+
+        // Save each range with its label
+        clusterRanges.add(ClusterRange(clusterLabel, roundedMin, roundedMax))
+
+        // Map each review count to its cluster label
+        for (point in cluster.points) {
+            clusterMap[point.point[0].toInt()] = clusterLabel
+        }
+    }
+
+    return Pair(clusterMap, clusterRanges)
+}
+
 
     private fun updateReviewCountSummary(clusterRanges: List<ClusterRange>) {
         reviewCountSummary.removeAllViews()
@@ -1022,6 +1025,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             val customMarker = createCustomMarker(this, it.userRatingsTotal ?: 0, category, isSelected)
             marker.setIcon(customMarker)
         }
+    }
+
+    private fun showResultsView() {
+            resultsTitle.text = "Results"
+
+            reviewCountButton.visibility = View.VISIBLE
+            superReviewButton.visibility = View.VISIBLE
+            scrollView.visibility = View.VISIBLE
+
+            placeDetailsLayout.visibility = View.GONE
+
+            resetSelectedMarker()
     }
 
 }
