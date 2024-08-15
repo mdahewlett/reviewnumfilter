@@ -555,6 +555,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                     val roundedHighestReviews = ceil(highestReviews / 10.0) * 10
                                     
                                     // Configure review count views
+                                    updateButtonBackground(reviewCountButton, R.drawable.rounded_corners, R.color.colorBackground)
                                     updateReviewCountSummary(clusterRanges)
                                     reviewCountButton.setOnClickListener {
                                         showSliderDialog(roundedHighestReviews.toInt(), accumulatedResults)
