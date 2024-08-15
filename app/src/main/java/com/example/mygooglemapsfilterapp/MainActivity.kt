@@ -44,6 +44,7 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -100,6 +101,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var mapFragment: SupportMapFragment
     private lateinit var myLocationButton: ImageButton
     private var isCameraCentered = false
+    private val markerPlaceMap = mutableMapOf<Marker, PlaceData>()
 
     // Search
     private lateinit var searchView: SearchView
@@ -394,6 +396,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         mMap.setOnCameraMoveListener {
             updateButtonState()
         }
+
+        mMap.setOnMarkerClickListener { marker ->
+            val place = markerPlaceMap[marker]
+            place?.let {
+                showPlaceDetails(it)
+                bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+            }
+            true
+        }
     }
 
     // Location permission logic
@@ -612,23 +623,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // Add marker logic
     private fun addMarkersToMap(places: List<PlaceData>, clusters: Map<Int, String>, moveCamera:Boolean = true) {
         mMap.clear()
+        markerPlaceMap.clear()
 
         // Initialize bounds
         val boundsBuilder = LatLngBounds.builder()
 
         // Add markers
         for (place in places) {
-
-            Log.i("MainActivity", place.id ?: "") // debug
-            Log.i("MainActivity", place.name ?: "") // debug
-
             val latLng = place.latLng
             val reviews = place.userRatingsTotal ?: 0
             val category = clusters[reviews] ?: "Low"
             if (latLng != null) {
                 val customMarker = createCustomMarker(this, reviews, category)
-                mMap.addMarker(MarkerOptions().position(latLng).title(place.name).icon(customMarker))
-                boundsBuilder.include(latLng)
+                val marker = mMap.addMarker(MarkerOptions().position(latLng).title(place.name).icon(customMarker))
+                marker?.let {
+                    markerPlaceMap[marker] = place
+                    boundsBuilder.include(latLng)
+                }
             }
         }
 
