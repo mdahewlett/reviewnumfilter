@@ -878,22 +878,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             .setCancelable(true)
             .create()
         
--        if (dialog.isShowing == true) {
--            Log.d("MainActivity", "No results dialog already showing")
--            return
--        }
--
-         closeButton.setOnClickListener {
--            Log.d("MainActivity", "Close button clicked")
-             searchView.setQuery("", false)
-             searchView.clearFocus()
--            Log.d("MainActivity", "Search cleared")
-             dialog.dismiss()
--            Log.d("MainActivity", "Dialog dismissed")
-         }
- 
-         dialog.show()
--        Log.d("MainActivity", "No results dialog opened")
+        closeButton.setOnClickListener {
+            searchView.setQuery("", false)
+            searchView.clearFocus()
+            dialog.dismiss()
+        }
+
+        dialog.show()
 
     }
 
