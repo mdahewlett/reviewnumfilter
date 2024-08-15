@@ -182,7 +182,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         backToResultsButton = binding.backToResultsButton
 
         // Initialize bottom sheet
-         bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheet)
+        bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheet)
         initBottomSheet()
 
         bottomSheet.viewTreeObserver.addOnGlobalLayoutListener {
@@ -213,6 +213,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             moveToCurrentLocation()
         }
 
+        // Back to results button - debugging button
         backToResultsButton.setOnClickListener {
             resultsTitle.text = "Results"
 
@@ -392,12 +393,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Request last location, move camera there
         moveToCurrentLocation(15f)
         
-        // My location button changes when centered on user
+        // Location button changes when centered on user
         mMap.setOnCameraMoveListener {
             updateButtonState()
         }
 
         mMap.setOnMarkerClickListener { marker ->
+            
+            markerPlaceMap.keys.forEach { updateMarkerStyle(it, isSelected = false) }
+
+            updateMarkerStyle(marker, isSelected = true)
+
             val place = markerPlaceMap[marker]
             place?.let {
                 showPlaceDetails(it)
@@ -441,16 +447,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun updateButtonState() {
         if (checkLocationPermission()) {
             val cameraPosition = mMap.cameraPosition.target
-            Log.d("Location", "Camera position: $cameraPosition")
             val currentLocation = mFusedLocationProviderClient.lastLocation
             currentLocation.addOnSuccessListener { location: Location? ->
                 location?.let {
                     val locationLatLng = LatLng(it.latitude, it.longitude)
-                    Log.d("Location", "User location: $locationLatLng")
                     
                     isCameraCentered = Math.abs(cameraPosition.latitude - locationLatLng.latitude) < 0.0001 &&
                                        Math.abs(cameraPosition.longitude - locationLatLng.longitude) < 0.0001
-                    Log.d("Location", "Is camera centered: $isCameraCentered")
                     if (isCameraCentered) {
                         myLocationButton.setImageResource(R.drawable.ic_mylocation_centered)
                     } else {
@@ -485,10 +488,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val radius = (results[0] / 2).toInt()
 
         val url = "https://maps.googleapis.com/maps/api/place/textsearch/json?query=${URLEncoder.encode(query, "UTF-8")}&location=${center.latitude},${center.longitude}&radius=$radius&key=$apiKey${if (pageToken != null) "&pagetoken=$pageToken" else ""}"
-
-        Log.d("MainActivity", "Request URL: $url")
-
-        Log.d("MainActivity", "Map bounds: NE(${bounds.northeast.latitude}, ${bounds.northeast.longitude}), SW(${bounds.southwest.latitude}, ${bounds.southwest.longitude})")
 
         val request = Request.Builder()
             .url(url)
@@ -533,16 +532,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                     showNoResultsDialog()
                                     return@runOnUiThread
                                 }
-
-                                for (place in accumulatedResults) {
-                                Log.d("MainActivity", "Place: ${place.name}, Location: (${place.latLng.latitude}, ${place.latLng.longitude}), Ratings: ${place.userRatingsTotal}")
-                                }
-
+                                
+                                // Place markers with higher reviews are displayed above others
                                 accumulatedResults.sortedByDescending { it.userRatingsTotal }
 
                                 val reviewList = accumulatedResults.mapNotNull { it.userRatingsTotal }
                                 val (calculateClusters, clusterRanges) = calculateClusters(reviewList)
                                 clusters = calculateClusters
+
+                                //debug
+                                Log.d("MainActivity", "Clusters: $clusters")
 
                                 if (reviewList.isNotEmpty()) {
                                     val highestReviews = reviewList.maxOrNull() ?: 0
@@ -592,12 +591,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     )
 
     // Custom marker logic
-    private fun createCustomMarker(context: Context, reviewCount: Int, category: String): BitmapDescriptor {
-        // create marker view
+    private fun createCustomMarker(context: Context, reviewCount: Int, category: String, isSelected: Boolean = false): BitmapDescriptor {
+        // Create marker view
         val markerView = (context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater)
             .inflate(R.layout.custom_marker_layout, null)
         
-        // add review count and category
+        // Add review count and category
         val reviewCountTextView = markerView.findViewById<TextView>(R.id.review_count)
         val indicator = when (category) {
             "S" -> "🔥 "
@@ -607,16 +606,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
         reviewCountTextView.text = "$indicator$reviewCount"
 
-        // set arbitrary size and location
+        // Update marker style if selected or unselected
+        val backgroundRes = if (isSelected) R.drawable.marker_selected_background else R.drawable.marker_default_background
+        val textColorRes = if (isSelected) android.R.color.white else android.R.color.black
+
+        reviewCountTextView.setBackgroundResource(backgroundRes)
+        reviewCountTextView.setTextColor(ContextCompat.getColor(context, textColorRes))
+
+        // Set arbitrary size and location
         markerView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
         markerView.layout(0, 0, markerView.measuredWidth, markerView.measuredHeight)
 
-        // create container with right dimensions, draw onto 
+        // Create container with right dimensions, draw onto 
         val bitmap = Bitmap.createBitmap(markerView.measuredWidth, markerView.measuredHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         markerView.draw(canvas)
 
-        // package as icon for google maps
+        // Package as icon for google maps
         return BitmapDescriptorFactory.fromBitmap(bitmap)
     }
 
@@ -634,14 +640,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             val reviews = place.userRatingsTotal ?: 0
             val category = clusters[reviews] ?: "Low"
             if (latLng != null) {
+                val isSelected = false
                 val customMarker = createCustomMarker(this, reviews, category)
                 val marker = mMap.addMarker(MarkerOptions().position(latLng).title(place.name).icon(customMarker))
-                marker?.let {
-                    markerPlaceMap[marker] = place
-                    boundsBuilder.include(latLng)
+                markerPlaceMap[marker!!] = place
+                boundsBuilder.include(latLng)
                 }
             }
-        }
 
         // Fit map to the bounds
         if (moveCamera) {
@@ -807,7 +812,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             val roundedMax = ((max + 99) / 100) * 100
             clusterRanges.add(ClusterRange(label, roundedMin, roundedMax))
 
-
             for (point in cluster.points) {
                 clusterMap[point.point[0].toInt()] = label
             }
@@ -926,17 +930,36 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun showPlaceDetails(place: PlaceData) {
-        resultsTitle.text = place.name
+        // Highlight that place's marker
+        markerPlaceMap.keys.forEach { marker ->
+            updateMarkerStyle(marker, isSelected = false)
+            }
 
+        val selectedMarker = markerPlaceMap.entries.find { it.value.id == place.id }?.key
+
+        selectedMarker?.let {
+            updateMarkerStyle(it, isSelected = true)
+        }
+        
+        // Update bottom sheet content
+        resultsTitle.text = place.name
         reviewCountButton.visibility = View.GONE
         superReviewButton.visibility = View.GONE
         scrollView.visibility = View.GONE
-
-
         placeDetailsLayout.visibility = View.VISIBLE
-
         placeDetailsView.text = "${place.userRatingsTotal} reviews"
     }
 
+    private fun updateMarkerStyle(marker: Marker, isSelected: Boolean) {
+        val place = markerPlaceMap[marker]
 
+
+        place?.let {
+            val reviews = place.userRatingsTotal ?: 0
+            val category = clusters[reviews] ?: "Low"
+            val customMarker = createCustomMarker(this, it.userRatingsTotal, category, isSelected)
+            marker.setIcon(customMarker)
+        }
+    }
+    
 }
