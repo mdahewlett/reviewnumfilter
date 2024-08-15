@@ -123,6 +123,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var superReviewButton: Button
     private lateinit var reviewCountSummary: LinearLayout
     private lateinit var clusters: Map<Int, String>
+    private var noSuper = false
 
     // Filter
     private var previousMin: Float = 0f
@@ -225,6 +226,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Back to results button - debugging button
         backToResultsButton.setOnClickListener {
             showResultsView()
+            showFilters()
         }
 
         // Loading progress logic
@@ -553,8 +555,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                     val highestReviews = reviewList.maxOrNull() ?: 0
                                     val roundedHighestReviews = ceil(highestReviews / 10.0) * 10
 
-                                    reviewCountButton.visibility = View.VISIBLE
-                                    superReviewButton.visibility = View.VISIBLE
+                                    showFilters()
                                     reviewCountSummary.visibility = View.VISIBLE
 
                                     reviewCountButton.setOnClickListener {
@@ -804,6 +805,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // Some results, but too few to cluster
     if (reviewCounts.size < numClusters) {
         Log.d("calculateClusters", "Not enough points to create $numClusters clusters.")
+        noSuper = true
         val clusterMap = reviewCounts.associateWith { "M" }
         val clusterRanges = listOf(ClusterRange("M", reviewCounts.minOrNull() ?: 0, reviewCounts.maxOrNull() ?: 0))
         return Pair(clusterMap, clusterRanges)
@@ -845,6 +847,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    noSuper = false
     return Pair(clusterMap, clusterRanges)
 }
 
@@ -1028,15 +1031,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun showResultsView() {
-            resultsTitle.text = "Results"
+        resultsTitle.text = "Results"
+        scrollView.visibility = View.VISIBLE
+        placeDetailsLayout.visibility = View.GONE
+        resetSelectedMarker()
+    }
 
-            reviewCountButton.visibility = View.VISIBLE
+    private fun showFilters() {
+        reviewCountButton.visibility = View.VISIBLE
+        if (!noSuper) {
             superReviewButton.visibility = View.VISIBLE
-            scrollView.visibility = View.VISIBLE
-
-            placeDetailsLayout.visibility = View.GONE
-
-            resetSelectedMarker()
+        }
     }
 
 }
