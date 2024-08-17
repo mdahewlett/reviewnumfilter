@@ -136,8 +136,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var isBottomSheetVisible = false
     private lateinit var resultsTitle: TextView
     private lateinit var clearResultsButton: ImageButton
-    private lateinit var scrollView: ScrollView
+    private lateinit var resultsSortButton: Button
     private lateinit var resultsContainer: LinearLayout
+    private lateinit var scrollView: ScrollView
+    private var originalResults: List<PlaceData> = emptyList()
+    private var isSorted = false
+
+    // Place
     private lateinit var placeDetailsLayout: LinearLayout
     private lateinit var placeCategoryReviewsRatingView: TextView
     private lateinit var placeAddressView: TextView
@@ -179,9 +184,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         loadingProgressText = binding.loadingProgressText
         bottomSheet = binding.bottomSheet
         resultsTitle = binding.resultsTitle
-        scrollView = binding.scrollableSection
-        resultsContainer = binding.resultsContainer
         clearResultsButton = binding.clearResultsButton
+        resultsSortButton = binding.resultsSortButton
+        resultsContainer = binding.resultsContainer
+        scrollView = binding.scrollableSection
         placeDetailsLayout = binding.placeDetailsLayout
         placeCategoryReviewsRatingView = binding.placeCategoryReviewsRatingView
         placeAddressView = binding.placeAddressView
@@ -215,6 +221,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         bottomSheet.visibility = View.GONE
         reviewCountButton.visibility = View.GONE
         superReviewButton.visibility = View.GONE
+        resultsSortButton.visibility = View.GONE
         reviewCountSummary.visibility = View.GONE
         loadingStateMessage.visibility = View.GONE
 
@@ -227,6 +234,21 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         backToResultsButton.setOnClickListener {
             showResultsView()
             showFilters()
+        }
+
+        // Sort button logic
+        resultsSortButton.setOnClickListener {
+            if(isSorted) {
+                // Reset sort
+                addResultsToList(originalResults)
+                updateButtonBackground(resultsSortButton, R.drawable.rounded_corners, R.color.colorBackground)
+            } else {
+                // Sort by review count high to low
+                val sortedResults = originalResults.sortedByDescending { it.userRatingsTotal ?: 0 }
+                addResultsToList(sortedResults)
+                updateButtonBackground(resultsSortButton, R.drawable.rounded_corners, R.color.colorButtonActive)
+            }
+            isSorted = !isSorted
         }
 
         // Loading progress logic
@@ -580,6 +602,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                 // Add places to results list
                                 addResultsToList(accumulatedResults)
 
+                                // Enable sort button
+                                resultsSortButton.visibility = View.VISIBLE
+
                                 // Display results bottom sheet
                                 bottomSheet.visibility = View.VISIBLE
                             }
@@ -924,7 +949,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Search results list logic
     private fun addResultsToList(results: List<PlaceData>) {
-        
+        if (originalResults.isEmpty()) {
+            originalResults = results
+        }
+
+
         // clear existing views
         resultsContainer.removeAllViews()
 
@@ -990,6 +1019,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Hide/show views
         reviewCountButton.visibility = View.GONE
         superReviewButton.visibility = View.GONE
+        resultsSortButton.visibility = View.GONE
         scrollView.visibility = View.GONE
         placeDetailsLayout.visibility = View.VISIBLE
     }
@@ -1021,6 +1051,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun showResultsView() {
         resultsTitle.text = "Results"
+        resultsSortButton.visibility = View.VISIBLE
         scrollView.visibility = View.VISIBLE
         placeDetailsLayout.visibility = View.GONE
         resetSelectedMarker()
