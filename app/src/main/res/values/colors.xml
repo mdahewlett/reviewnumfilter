@@ -14,4 +14,6 @@
     <color name="selected_marker_background">#757575</color>
     <color name="selected_text_color">#FFFFFF</color>
     <color name="selected_stroke_color">#FEFEFF</color>
+    <color name="selectColor">#0957cf</color>
+    <color name="progressDefault">#edf2fd</color>
 </resources>

@@ -82,7 +82,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        app:rsb_mode="range" />
+        app:rsb_mode="range"
+        app:rsb_progress_color="@color/selectColor"
+        app:rsb_progress_default_color="@color/progressDefault"
+        app:rsb_thumb_drawable="@drawable/slider_thumb"
+        app:rsb_thumb_width="10dp"
+        app:rsb_thumb_height="10dp"
+        app:rsb_thumb_scale_ratio="1.2" />
     
     <TextView
         android:id="@+id/slider_value"
@@ -111,14 +117,18 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Cancel" />
+            android:colorBackground="@color/progressDefault"
+            android:text="Cancel"
+            android:textColor="@color/selectColor" />
         
         <Button
             android:id="@+id/slider_done_button"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Done" />
+            android:colorBackground="@color/selectColor"
+            android:text="Apply"
+            android:textColor="#FFFFFF" />
 
     </LinearLayout>
 
