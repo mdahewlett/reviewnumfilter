@@ -2,4 +2,8 @@
 <resources>
     <string name="app_name">CP值</string>
     <string name="my_location">My Location</string>
+    <string name="radio_all">All</string>
+    <string name="radio_m">M</string>
+    <string name="radio_h">H</string>
+    <string name="radio_s">🔥</string>
 </resources>

@@ -24,6 +24,8 @@ import android.widget.TextView
 import android.widget.ImageButton
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import android.widget.ScrollView
+import android.widget.RadioGroup
+import android.widget.RadioButton
 
 // Androidx libraries
 import androidx.appcompat.app.AppCompatActivity
@@ -580,7 +582,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                     updateButtonBackground(reviewCountButton, R.drawable.rounded_corners, R.color.colorBackground)
                                     updateReviewCountSummary(clusterRanges)
                                     reviewCountButton.setOnClickListener {
-                                        showSliderDialog(roundedHighestReviews.toInt(), accumulatedResults)
+                                        showSliderDialog(roundedHighestReviews.toInt(), accumulatedResults, clusterRanges)
                                     }
                                     superReviewButton.setOnClickListener {
                                         toggleSuperReviewFilter(accumulatedResults, clusterRanges)
@@ -709,14 +711,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     // Slider dialog logic
-    private fun showSliderDialog(roundedHighestReviews: Int, results: List<PlaceData>) {
+    private fun showSliderDialog(roundedHighestReviews: Int, results: List<PlaceData>, clusterRanges: List<ClusterRange>) {
+        
+        Log.d("MainActivity", "Finding views in dialog")
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_slider, null)
         val rangeSlider = dialogView.findViewById<com.jaygoo.widget.RangeSeekBar>(R.id.review_count_range_slider)
         val sliderValue = dialogView.findViewById<TextView>(R.id.slider_value)
         val numberOfPlacesText = dialogView.findViewById<TextView>(R.id.number_of_places_text)
         val cancelButton = dialogView.findViewById<Button>(R.id.slider_cancel_button)
         val doneButton = dialogView.findViewById<Button>(R.id.slider_done_button)
+        val reviewCountClusterSelector = dialogView.findViewById<LinearLayout>(R.id.review_count_cluster_selector)
 
+        Log.d("MainActivity", "Creating dialog")
         val dialog = android.app.AlertDialog.Builder(this)
             .setView(dialogView)
             .create()
@@ -740,6 +746,53 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         numberOfPlacesText.text = "Places in range: $placesInRange"
+
+        // set sliders by clicking cluster buttons
+
+        // set "All" as default selection
+        Log.d("MainActivity", "Setting default selected button")
+        var selectedTextView: TextView = dialogView.findViewById(R.id.cluster_all_button);
+        selectedTextView.isSelected = true
+
+        Log.d("MainActivity", "Setting up cluster selection buttons")
+        for (i in 0 until reviewCountClusterSelector.childCount step 2) {
+            val clusterTextView: TextView = reviewCountClusterSelector.getChildAt(i) as TextView
+            Log.d("MainActivity", "Cluster button found: ${clusterTextView. text}")
+            
+            clusterTextView.setOnClickListener { view ->
+                Log.d("MainActivity", "Cluster button clicked: ${view.id}")
+                // Keep one button always selected
+                if (view.isSelected) {
+                    Log.d("MainActivity", "Button already selected, skipping deselection")
+                    return@setOnClickListener
+                }
+
+                // Clear previous selection
+                selectedTextView.isSelected = false
+
+                // Set new selection
+                view.isSelected = true
+                selectedTextView = view as TextView
+
+                val selectedCategory: String = when (view.id) {
+                    R.id.cluster_all_button -> {
+                        rangeSlider.setProgress(0f, roundedHighestReviews.toFloat())
+                        return@setOnClickListener
+                    }
+                    R.id.cluster_m_button -> "M"
+                    R.id.cluster_h_button -> "H"
+                    R.id.cluster_s_button -> "S"
+                    else -> ""
+                }
+
+                if (selectedCategory.isNotEmpty()) {
+                    val categoryRange = clusterRanges.find { it.label == selectedCategory }
+                    categoryRange?.let {
+                        rangeSlider.setProgress(it.min.toFloat(), roundedHighestReviews.toFloat())
+                    }
+                }
+            }
+        }
 
         // prevent sliders passing each other, update displayed info as sliders move 
         rangeSlider.setOnRangeChangedListener(object : com.jaygoo.widget.OnRangeChangedListener {

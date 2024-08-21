@@ -1,0 +1,4 @@
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@color/custom_radio_selector" />
+    <corners android:topLeftRadius="16dp" android:bottomLeftRadius="16dp" />
+</shape>
