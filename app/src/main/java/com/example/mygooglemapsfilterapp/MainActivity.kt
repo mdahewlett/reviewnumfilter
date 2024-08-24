@@ -816,11 +816,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
             val rangeSliderWidth = rangeSlider.width
             val leftThumbPos = rangeSliderWidth * ((min - rangeSlider.valueFrom) / (rangeSlider.valueTo - rangeSlider.valueFrom))
+            Log.d("sliderDebug", "Left: $leftThumbPos")
             val rightThumbPos = rangeSliderWidth * ((max - rangeSlider.valueFrom) / (rangeSlider.valueTo - rangeSlider.valueFrom))
+            Log.d("sliderDebug", "Right: $rightThumbPos")
             val midpoint = (leftThumbPos + rightThumbPos) / 2
+            Log.d("sliderDebug", "Midpoint: $midpoint")
 
             val maxAllowedPosition = rangeSliderWidth - sliderValue.width
+
+            Log.d("sliderDebug", "Range width: $rangeSliderWidth")
+            Log.d("sliderDebug", "Text width: ${sliderValue.width}")
+
             val adjustedPosition = midpoint - sliderValue.width / 2
+            Log.d("sliderDebug", "Adjusted potiion: $adjustedPosition")
 
             sliderValue.x = when {
                 adjustedPosition < 0 -> 0f
