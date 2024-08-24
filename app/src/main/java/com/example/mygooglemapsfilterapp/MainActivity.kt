@@ -754,7 +754,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             placesInRange = results.count { (it.userRatingsTotal ?: 0) in 0..roundedHighestReviews.toInt() }
         }
 
-        numberOfPlacesText.text = "Places in range: $placesInRange"
+        numberOfPlacesText.text = "$placesInRange ${if (placesInRange == 1) "place" else "places"}"
 
         // set sliders by clicking cluster buttons
 
@@ -833,7 +833,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             sliderValue.text = "${(min.toInt() / 10) * 10} - ${(max.toInt() / 10) * 10}"
 
             placesInRange = results.count { (it.userRatingsTotal ?: 0) in min.toInt()..max.toInt() }
-            numberOfPlacesText.text = "Places in range: $placesInRange"
+            numberOfPlacesText.text = "$placesInRange ${if (placesInRange == 1) "place" else "places"}"
         }
 
         rangeSlider.addOnSliderTouchListener(object : RangeSlider.OnSliderTouchListener {
