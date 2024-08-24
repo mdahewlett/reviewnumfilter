@@ -14,6 +14,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.TypedValue
 import android.view.MotionEvent
+import android.view.ViewTreeObserver
 
 // Android components
 import android.widget.RelativeLayout
@@ -24,6 +25,7 @@ import android.widget.TextView
 import android.widget.ImageButton
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import android.widget.ScrollView
+import com.google.android.material.slider.RangeSlider
 import android.widget.RadioGroup
 import android.widget.RadioButton
 
@@ -80,7 +82,6 @@ import android.graphics.drawable.LayerDrawable
 import android.graphics.drawable.GradientDrawable
 
 // Filter
-import com.jaygoo.widget.RangeSeekBar
 import kotlin.math.ceil
 import kotlin.math.floor
 import org.apache.commons.math3.ml.clustering.Cluster
@@ -130,6 +131,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // Filter
     private var previousMin: Float = 0f
     private var previousMax: Float = 0f
+    private var sliderValuePositionX: Float? = null
     private var isSuperReviewFilterApplied = false
 
     // Results
@@ -712,36 +714,43 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Slider dialog logic
     private fun showSliderDialog(roundedHighestReviews: Int, results: List<PlaceData>, clusterRanges: List<ClusterRange>) {
-        
-        Log.d("MainActivity", "Finding views in dialog")
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_slider, null)
-        val rangeSlider = dialogView.findViewById<com.jaygoo.widget.RangeSeekBar>(R.id.review_count_range_slider)
+        val rangeSlider = dialogView.findViewById<com.google.android.material.slider.RangeSlider>(R.id.review_count_range_slider)
         val sliderValue = dialogView.findViewById<TextView>(R.id.slider_value)
         val numberOfPlacesText = dialogView.findViewById<TextView>(R.id.number_of_places_text)
         val cancelButton = dialogView.findViewById<Button>(R.id.slider_cancel_button)
         val doneButton = dialogView.findViewById<Button>(R.id.slider_done_button)
         val reviewCountClusterSelector = dialogView.findViewById<LinearLayout>(R.id.review_count_cluster_selector)
 
-        Log.d("MainActivity", "Creating dialog")
         val dialog = android.app.AlertDialog.Builder(this)
             .setView(dialogView)
             .create()
         
         // set slider range and steps
-        rangeSlider.setRange(0f, roundedHighestReviews.toFloat())
-        rangeSlider.setSteps(10)
+        rangeSlider.valueFrom = 0f
+        rangeSlider.valueTo = roundedHighestReviews.toFloat()
+        rangeSlider.stepSize = 10f 
 
         var placesInRange: Int
 
         // set slider buttons and display information
         if (previousMin != 0f || previousMax != 0f) {
-            rangeSlider.setProgress(previousMin, previousMax)
-            sliderValue.text = "Range: ${previousMin.toInt()} - ${previousMax.toInt()}"
+            rangeSlider.setValues(previousMin, previousMax)
+            
+            // adjust range indicator position after view is drawn
+            sliderValue.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    sliderValue.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    sliderValue.x = sliderValuePositionX?.toFloat() ?: 0.0f
+                }
+            })
+
+            sliderValue.text = "${previousMin.toInt()} - ${previousMax.toInt()}"
             placesInRange = results.count { (it.userRatingsTotal ?: 0) in previousMin.toInt()..previousMax.toInt() }
 
         } else {
-            rangeSlider.setProgress(0f, roundedHighestReviews.toFloat())
-            sliderValue.text = "Range: 0 - ${roundedHighestReviews.toInt()}"
+            rangeSlider.setValues(0f, roundedHighestReviews.toFloat())
+            sliderValue.text = "0 - ${roundedHighestReviews.toInt()}"
             placesInRange = results.count { (it.userRatingsTotal ?: 0) in 0..roundedHighestReviews.toInt() }
         }
 
@@ -750,20 +759,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // set sliders by clicking cluster buttons
 
         // set "All" as default selection
-        Log.d("MainActivity", "Setting default selected button")
         var selectedTextView: TextView = dialogView.findViewById(R.id.cluster_all_button);
         selectedTextView.isSelected = true
 
-        Log.d("MainActivity", "Setting up cluster selection buttons")
         for (i in 0 until reviewCountClusterSelector.childCount step 2) {
             val clusterTextView: TextView = reviewCountClusterSelector.getChildAt(i) as TextView
-            Log.d("MainActivity", "Cluster button found: ${clusterTextView. text}")
             
             clusterTextView.setOnClickListener { view ->
-                Log.d("MainActivity", "Cluster button clicked: ${view.id}")
                 // Keep one button always selected
                 if (view.isSelected) {
-                    Log.d("MainActivity", "Button already selected, skipping deselection")
                     return@setOnClickListener
                 }
 
@@ -776,7 +780,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                 val selectedCategory: String = when (view.id) {
                     R.id.cluster_all_button -> {
-                        rangeSlider.setProgress(0f, roundedHighestReviews.toFloat())
+                        rangeSlider.setValues(0f, roundedHighestReviews.toFloat())
                         return@setOnClickListener
                     }
                     R.id.cluster_m_button -> "M"
@@ -788,44 +792,59 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 if (selectedCategory.isNotEmpty()) {
                     val categoryRange = clusterRanges.find { it.label == selectedCategory }
                     categoryRange?.let {
-                        rangeSlider.setProgress(it.min.toFloat(), roundedHighestReviews.toFloat())
+                        rangeSlider.setValues(it.min.toFloat(), roundedHighestReviews.toFloat())
                     }
                 }
             }
         }
 
         // prevent sliders passing each other, update displayed info as sliders move 
-        rangeSlider.setOnRangeChangedListener(object : com.jaygoo.widget.OnRangeChangedListener {
-            override fun onRangeChanged (
-                view: com.jaygoo.widget.RangeSeekBar,
-                min: Float,
-                max: Float,
-                isFromUser: Boolean
-            ) {
-                if (isFromUser) {
-                    if (max - min < 10) {
-                        if (min != previousMin) {
-                            view.setProgress(max - 10, max)
-                        } else if (max != previousMax) {
-                            view.setProgress(min, min + 10)
-                        }
-                    } else {
-                        previousMin = min
-                        previousMax = max
-                    }
+        rangeSlider.addOnChangeListener { slider, _, _ ->
+            val min = slider.values[0]
+            val max = slider.values[1] 
+
+            if (max - min < 10) {
+                if (min != previousMin) {
+                    slider.setValues(max - 10, max)
+                } else if (max != previousMax) {
+                    slider.setValues(min, min + 10)
                 }
-                sliderValue.text = "Range: ${(min.toInt() / 10) * 10} - ${(max.toInt() / 10) * 10}"
-
-                placesInRange = results.count { (it.userRatingsTotal ?: 0) in min.toInt()..max.toInt() }
-                numberOfPlacesText.text = "Places in range: $placesInRange"
+            } else {
+                previousMin = min
+                previousMax = max
             }
 
-            override fun onStartTrackingTouch(view: com.jaygoo.widget.RangeSeekBar?, isLeft: Boolean) {
-                previousMin = view?.leftSeekBar?.progress ?: 0f
-                previousMax = view?.rightSeekBar?.progress ?: 0f
+            val rangeSliderWidth = rangeSlider.width
+            val leftThumbPos = rangeSliderWidth * ((min - rangeSlider.valueFrom) / (rangeSlider.valueTo - rangeSlider.valueFrom))
+            val rightThumbPos = rangeSliderWidth * ((max - rangeSlider.valueFrom) / (rangeSlider.valueTo - rangeSlider.valueFrom))
+            val midpoint = (leftThumbPos + rightThumbPos) / 2
+
+            val maxAllowedPosition = rangeSliderWidth - sliderValue.width
+            val adjustedPosition = midpoint - sliderValue.width / 2
+
+            sliderValue.x = when {
+                adjustedPosition < 0 -> 0f
+                adjustedPosition > maxAllowedPosition -> maxAllowedPosition.toFloat()
+                else -> adjustedPosition
             }
 
-            override fun onStopTrackingTouch(view: com.jaygoo.widget.RangeSeekBar?, isLeft: Boolean) {}
+            sliderValuePositionX = sliderValue.x
+
+            sliderValue.text = "${(min.toInt() / 10) * 10} - ${(max.toInt() / 10) * 10}"
+
+            placesInRange = results.count { (it.userRatingsTotal ?: 0) in min.toInt()..max.toInt() }
+            numberOfPlacesText.text = "Places in range: $placesInRange"
+        }
+
+        rangeSlider.addOnSliderTouchListener(object : RangeSlider.OnSliderTouchListener {
+            override fun onStartTrackingTouch(slider: RangeSlider) {
+                previousMin = slider.values[0]
+                previousMax = slider.values[1]
+            }
+
+            override fun onStopTrackingTouch(slider: RangeSlider) {
+
+            }
         })
 
         cancelButton.setOnClickListener {
@@ -835,13 +854,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         doneButton.setOnClickListener {
             
             // filter by range
-            val minCount = rangeSlider.leftSeekBar.progress.toInt()
-            val maxCount = rangeSlider.rightSeekBar.progress.toInt()
+            val minCount = rangeSlider.values[0].toInt()
+            val maxCount = rangeSlider.values[1].toInt()
 
             filterReviewsbyCount(results, minCount, maxCount)
 
             // display selected range
-            if (rangeSlider.leftSeekBar.progress != 0f || rangeSlider.rightSeekBar.progress != roundedHighestReviews.toFloat()) {
+            if (minCount != 0 || maxCount != roundedHighestReviews.toInt()) {
                 val roundedMinCount = (floor(minCount / 10.0) * 10).toInt()
                 val roundedMaxCount = (ceil(maxCount / 10.0) * 10).toInt()
                 reviewCountButton.text = "$roundedMinCount - $roundedMaxCount"
