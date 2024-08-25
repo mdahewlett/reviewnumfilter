@@ -25,6 +25,7 @@ import android.widget.SearchView
 import android.widget.TextView
 import android.widget.ImageButton
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import android.widget.ScrollView
 import com.google.android.material.slider.RangeSlider
 import android.widget.RadioGroup
@@ -716,6 +717,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // Slider dialog logic
     private fun showSliderDialog(roundedHighestReviews: Int, results: List<PlaceData>, clusterRanges: List<ClusterRange>) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_slider, null)
+        val bottomSheetDialog = BottomSheetDialog(this, R.style.FullWidthBottomSheetDialogTheme)
         val rangeSlider = dialogView.findViewById<com.google.android.material.slider.RangeSlider>(R.id.review_count_range_slider)
         val sliderValue = dialogView.findViewById<TextView>(R.id.slider_value)
         val numberOfPlacesText = dialogView.findViewById<TextView>(R.id.number_of_places_text)
@@ -723,19 +725,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val doneButton = dialogView.findViewById<Button>(R.id.slider_done_button)
         val reviewCountClusterSelector = dialogView.findViewById<LinearLayout>(R.id.review_count_cluster_selector)
 
-        val dialog = android.app.AlertDialog.Builder(this)
-            .setView(dialogView)
-            .create()
-        
-        // Set dialog to full screen width
-        dialog.setOnShowListener {
-            val window = dialog.window
-            val layoutParams = WindowManager.LayoutParams()
-            layoutParams.copyFrom(window?.attributes)
-            layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT
-            layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT
-            window?.attributes = layoutParams
-        }
+        bottomSheetDialog.setContentView(dialogView)
 
         // Set slider range and steps
         rangeSlider.valueFrom = 0f
@@ -885,7 +875,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         })
 
         cancelButton.setOnClickListener {
-            dialog.dismiss()
+            bottomSheetDialog.dismiss()
         }
 
         doneButton.setOnClickListener {
@@ -919,10 +909,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 )
             }
 
-            dialog.dismiss()
+            bottomSheetDialog.dismiss()
         }
 
-        dialog.show()
+        bottomSheetDialog.show()
     }
 
    fun calculateClusters(reviewCounts: List<Int>, numClusters: Int = 4): Pair<Map<Int, String>, List<ClusterRange>> {
