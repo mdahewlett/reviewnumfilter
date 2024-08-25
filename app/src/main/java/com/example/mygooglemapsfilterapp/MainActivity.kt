@@ -15,6 +15,7 @@ import android.os.Looper
 import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.ViewTreeObserver
+import android.view.WindowManager
 
 // Android components
 import android.widget.RelativeLayout
@@ -726,14 +727,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             .setView(dialogView)
             .create()
         
-        // set slider range and steps
+        // Set dialog to full screen width
+        dialog.setOnShowListener {
+            val window = dialog.window
+            val layoutParams = WindowManager.LayoutParams()
+            layoutParams.copyFrom(window?.attributes)
+            layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT
+            layoutParams.height = WindowManager.LayoutParams.WRAP_CONTENT
+            window?.attributes = layoutParams
+        }
+
+        // Set slider range and steps
         rangeSlider.valueFrom = 0f
         rangeSlider.valueTo = roundedHighestReviews.toFloat()
         rangeSlider.stepSize = 10f 
 
         var placesInRange: Int
 
-        // set slider buttons and display information
+        // Set slider buttons and display information
         if (previousMin != 0f || previousMax != 0f) {
             rangeSlider.setValues(previousMin, previousMax)
             
@@ -761,6 +772,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // set "All" as default selection
         var selectedTextView: TextView = dialogView.findViewById(R.id.cluster_all_button);
         selectedTextView.isSelected = true
+        selectedTextView.setCompoundDrawablesWithIntrinsicBounds(
+                    R.drawable.ic_check,
+                    0,
+                    0,
+                    0
+                )
 
         for (i in 0 until reviewCountClusterSelector.childCount step 2) {
             val clusterTextView: TextView = reviewCountClusterSelector.getChildAt(i) as TextView
@@ -773,10 +790,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                 // Clear previous selection
                 selectedTextView.isSelected = false
+                selectedTextView.setCompoundDrawablesWithIntrinsicBounds(0,0,0,0)
 
                 // Set new selection
                 view.isSelected = true
                 selectedTextView = view as TextView
+                view.setCompoundDrawablesWithIntrinsicBounds(
+                    R.drawable.ic_check,
+                    0,
+                    0,
+                    0
+                )
 
                 val selectedCategory: String = when (view.id) {
                     R.id.cluster_all_button -> {
@@ -812,7 +836,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             } else {
                 previousMin = min
                 previousMax = max
-            }
+            }    
 
             val rangeSliderWidth = rangeSlider.width
             val leftThumbPos = rangeSliderWidth * ((min - rangeSlider.valueFrom) / (rangeSlider.valueTo - rangeSlider.valueFrom))
@@ -842,12 +866,17 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
             placesInRange = results.count { (it.userRatingsTotal ?: 0) in min.toInt()..max.toInt() }
             numberOfPlacesText.text = "$placesInRange ${if (placesInRange == 1) "place" else "places"}"
+            
         }
 
         rangeSlider.addOnSliderTouchListener(object : RangeSlider.OnSliderTouchListener {
             override fun onStartTrackingTouch(slider: RangeSlider) {
                 previousMin = slider.values[0]
                 previousMax = slider.values[1]
+                if (selectedTextView.isSelected) {
+                    selectedTextView.isSelected = false
+                    selectedTextView.setCompoundDrawablesWithIntrinsicBounds(0,0,0,0)
+                }
             }
 
             override fun onStopTrackingTouch(slider: RangeSlider) {

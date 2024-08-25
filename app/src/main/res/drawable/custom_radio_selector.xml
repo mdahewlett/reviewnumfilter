@@ -1,0 +1,27 @@
+<!-- res/drawable/custom_radio_selector.xml -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Selected state: change background color and show checkmark -->
+    <item android:state_selected="true">
+        <layer-list>
+            <!-- Background color for selected state -->
+            <item>
+                <shape android:shape="rectangle">
+                    <solid android:color="@color/colorButtonActive" />
+                </shape>
+            </item>
+            <!-- Checkmark icon on top -->
+            <item android:right="8dp" android:gravity="center_vertical|end">
+                <bitmap android:src="@drawable/ic_check" android:gravity="center_vertical" />
+            </item>
+        </layer-list>
+    </item>
+
+    <!-- Default state: only change the background color -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/colorBackground" />
+        </shape>
+    </item>
+
+</selector>

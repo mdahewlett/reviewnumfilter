@@ -27,7 +27,7 @@
         <TextView
             android:id="@+id/cluster_all_button"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="24dp"
             android:layout_weight="1"
             android:gravity="center"
             android:text="All"
@@ -41,7 +41,7 @@
         <TextView
             android:id="@+id/cluster_m_button"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="24dp"
             android:layout_weight="1"
             android:gravity="center"
             android:text="M"
@@ -55,7 +55,7 @@
         <TextView
             android:id="@+id/cluster_h_button"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="24dp"
             android:layout_weight="1"
             android:gravity="center"
             android:text="H"
@@ -69,7 +69,7 @@
         <TextView
             android:id="@+id/cluster_s_button"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="24dp"
             android:layout_weight="1"
             android:gravity="center"
             android:text="🔥"
