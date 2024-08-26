@@ -134,6 +134,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private var previousMin: Float = 0f
     private var previousMax: Float = 0f
     private var sliderValuePositionX: Float? = null
+    private var selectedCategory: String = "All"
     private var isSuperReviewFilterApplied = false
 
     // Results
@@ -727,6 +728,27 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         bottomSheetDialog.setContentView(dialogView)
 
+        // Set selected cluster button
+        val initialSelectedButton: TextView? = when (selectedCategory) {
+            "M" -> dialogView.findViewById(R.id.cluster_m_button)
+            "H" -> dialogView.findViewById(R.id.cluster_h_button)
+            "S" -> dialogView.findViewById(R.id.cluster_s_button)
+            "Manual" -> null 
+            else -> dialogView.findViewById(R.id.cluster_all_button)
+        }
+
+        initialSelectedButton?.let {
+            it.isSelected = true
+            it.setCompoundDrawablesWithIntrinsicBounds(
+                R.drawable.ic_check,
+                0,
+                0,
+                0
+            )
+        }
+
+        var selectedTextView = initialSelectedButton
+
         // Set slider range and steps
         rangeSlider.valueFrom = 0f
         rangeSlider.valueTo = roundedHighestReviews.toFloat()
@@ -759,16 +781,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // set sliders by clicking cluster buttons
 
-        // set "All" as default selection
-        var selectedTextView: TextView = dialogView.findViewById(R.id.cluster_all_button);
-        selectedTextView.isSelected = true
-        selectedTextView.setCompoundDrawablesWithIntrinsicBounds(
-                    R.drawable.ic_check,
-                    0,
-                    0,
-                    0
-                )
-
         for (i in 0 until reviewCountClusterSelector.childCount step 2) {
             val clusterTextView: TextView = reviewCountClusterSelector.getChildAt(i) as TextView
             
@@ -779,8 +791,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
 
                 // Clear previous selection
-                selectedTextView.isSelected = false
-                selectedTextView.setCompoundDrawablesWithIntrinsicBounds(0,0,0,0)
+                selectedTextView?.isSelected = false
+                selectedTextView?.setCompoundDrawablesWithIntrinsicBounds(0,0,0,0)
 
                 // Set new selection
                 view.isSelected = true
@@ -792,22 +804,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     0
                 )
 
-                val selectedCategory: String = when (view.id) {
+                selectedCategory = when (view.id) {
                     R.id.cluster_all_button -> {
                         rangeSlider.setValues(0f, roundedHighestReviews.toFloat())
-                        return@setOnClickListener
+                        "All"
                     }
                     R.id.cluster_m_button -> "M"
                     R.id.cluster_h_button -> "H"
                     R.id.cluster_s_button -> "S"
-                    else -> ""
+                    else -> "All"
                 }
 
-                if (selectedCategory.isNotEmpty()) {
-                    val categoryRange = clusterRanges.find { it.label == selectedCategory }
-                    categoryRange?.let {
-                        rangeSlider.setValues(it.min.toFloat(), roundedHighestReviews.toFloat())
-                    }
+                val categoryRange = clusterRanges.find { it.label == selectedCategory }
+                categoryRange?.let {
+                    rangeSlider.setValues(it.min.toFloat(), roundedHighestReviews.toFloat())
                 }
             }
         }
@@ -830,19 +840,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
             val rangeSliderWidth = rangeSlider.width
             val leftThumbPos = rangeSliderWidth * ((min - rangeSlider.valueFrom) / (rangeSlider.valueTo - rangeSlider.valueFrom))
-            Log.d("sliderDebug", "Left: $leftThumbPos")
             val rightThumbPos = rangeSliderWidth * ((max - rangeSlider.valueFrom) / (rangeSlider.valueTo - rangeSlider.valueFrom))
-            Log.d("sliderDebug", "Right: $rightThumbPos")
             val midpoint = (leftThumbPos + rightThumbPos) / 2
-            Log.d("sliderDebug", "Midpoint: $midpoint")
 
             val maxAllowedPosition = rangeSliderWidth - sliderValue.width
 
-            Log.d("sliderDebug", "Range width: $rangeSliderWidth")
-            Log.d("sliderDebug", "Text width: ${sliderValue.width}")
-
             val adjustedPosition = midpoint - sliderValue.width / 2
-            Log.d("sliderDebug", "Adjusted potiion: $adjustedPosition")
 
             sliderValue.x = when {
                 adjustedPosition < 0 -> 0f
@@ -863,9 +866,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             override fun onStartTrackingTouch(slider: RangeSlider) {
                 previousMin = slider.values[0]
                 previousMax = slider.values[1]
-                if (selectedTextView.isSelected) {
-                    selectedTextView.isSelected = false
-                    selectedTextView.setCompoundDrawablesWithIntrinsicBounds(0,0,0,0)
+                if (selectedTextView?.isSelected == true) {
+                    selectedTextView?.isSelected = false
+                    selectedTextView?.setCompoundDrawablesWithIntrinsicBounds(0,0,0,0)
+                    selectedCategory = "Manual"
                 }
             }
 
