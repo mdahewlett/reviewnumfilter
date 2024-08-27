@@ -898,8 +898,23 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Update displayed info as sliders move 
         rangeSlider.addOnChangeListener { slider, _, _ ->
-            val min = slider.values[0]
-            val max = slider.values[1] 
+            var min = slider.values[0]
+            var max = slider.values[1] 
+
+            // Enforce a minimum distance of 10 between thumbs
+            val minimumDistance = 10f
+
+            if (max - min < minimumDistance) {
+                if (slider.activeThumbIndex == 0) {
+                    // Left thumb is active, move it back
+                    min = max - minimumDistance
+                    slider.values = listOf(min, max)
+                } else if (slider.activeThumbIndex == 1) {
+                    // Right thumb is active, move it forward
+                    max = min + minimumDistance
+                    slider.values = listOf(min, max)
+                }
+            }
 
             // Update slider information
             sliderValue.x = calculateSliderValuePositionX(
