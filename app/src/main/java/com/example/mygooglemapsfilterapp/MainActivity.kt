@@ -129,13 +129,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var reviewCountSummary: LinearLayout
     private lateinit var clusters: Map<Int, String>
     private var noSuper = false
+    private var roundedHighestReviews: Float = 0f 
 
     // Filter
     private var previousMin: Float = 0f
     private var previousMax: Float = 0f
+    private var rangeSliderFrom: Float = 0f
+    private var rangeSliderTo: Float = 0f
+    private var sliderValueWidth: Int = 0
     private var sliderValuePositionX: Float? = null
     private var selectedCategory: String = "All"
+    private var isDoneButtonClicked = false
+    private var dialogSetCategory: String = "All"
+    private var dialogSetMin: Float = 0f
+    private var dialogSetMax: Float = 0f
+    private var dialogSetSliderValuePositionX: Float? = null
     private var isSuperReviewFilterApplied = false
+    private var reviewCountButtonText: String = "Reviews"
+    private var isReviewCountButtonActive: Boolean = false
 
     // Results
     private lateinit var bottomSheet: LinearLayout
@@ -146,6 +157,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var resultsSortButton: Button
     private lateinit var resultsContainer: LinearLayout
     private lateinit var scrollView: ScrollView
+    private var filteredResults: List<PlaceData> = emptyList()
+    private var sortedResults: List<PlaceData> = emptyList()
     private var originalResults: List<PlaceData> = emptyList()
     private var isSorted = false
 
@@ -245,13 +258,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Sort button logic
         resultsSortButton.setOnClickListener {
+            val resultsToSort = if (filteredResults.isNotEmpty()) {
+                filteredResults
+            } else {
+                originalResults
+            }
+
             if(isSorted) {
                 // Reset sort
-                addResultsToList(originalResults)
+                addResultsToList(resultsToSort)
                 updateButtonBackground(resultsSortButton, R.drawable.rounded_corners, R.color.colorBackground)
             } else {
                 // Sort by review count high to low
-                val sortedResults = originalResults.sortedByDescending { it.userRatingsTotal ?: 0 }
+                sortedResults = resultsToSort.sortedByDescending { it.userRatingsTotal ?: 0 }
                 addResultsToList(sortedResults)
                 updateButtonBackground(resultsSortButton, R.drawable.rounded_corners, R.color.colorButtonActive)
             }
@@ -581,7 +600,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                                 if (reviewList.isNotEmpty()) {
                                     val highestReviews = reviewList.maxOrNull() ?: 0
-                                    val roundedHighestReviews = ceil(highestReviews / 10.0) * 10
+                                    roundedHighestReviews = ceil(highestReviews / 10.0).toFloat() * 10
                                     
                                     // Configure review count views
                                     updateButtonBackground(reviewCountButton, R.drawable.rounded_corners, R.color.colorBackground)
@@ -699,20 +718,41 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Filter logic
     private fun filterReviewsbyCount(results: List<PlaceData>, minCount: Int, maxCount: Int) {
-        val filteredResults = results.filter { (it.userRatingsTotal ?: 0) in minCount..maxCount }
+        // filter results
+        filteredResults = results.filter { (it.userRatingsTotal ?: 0) in minCount..maxCount }
+        
+        // add places to map
         addMarkersToMap(filteredResults, clusters, moveCamera = false)
-        addResultsToList(filteredResults)
+
+        // add results to list
+        if (isSorted) {
+            sortedResults = filteredResults.sortedByDescending { it.userRatingsTotal ?: 0 }
+            addResultsToList(sortedResults)
+        } else {
+            addResultsToList(filteredResults)
+        }
     }
 
     private fun filterReviewsbyCluster(results: List<PlaceData>, selectedClusterLabel: String, clusterRanges: List<ClusterRange>) {
         val selectedCluster = clusterRanges.find { it.label == selectedClusterLabel }
-        val filteredResults = if (selectedCluster != null) {
+        
+        // filter results
+        filteredResults = if (selectedCluster != null) {
             results.filter { (it.userRatingsTotal ?: 0) in selectedCluster.min..selectedCluster.max }
         } else {
             results
         }
+        
+        // add places to map
         addMarkersToMap(filteredResults, clusters, moveCamera = false)
-        addResultsToList(filteredResults)
+        
+        // add results to list
+        if (isSorted) {
+            sortedResults = filteredResults.sortedByDescending { it.userRatingsTotal ?: 0 }
+            addResultsToList(sortedResults)
+        } else {
+            addResultsToList(filteredResults)
+        }
     }
 
     // Slider dialog logic
@@ -728,7 +768,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         bottomSheetDialog.setContentView(dialogView)
 
-        // Set selected cluster button
+        // Set slider range and steps
+        rangeSlider.valueFrom = 0f
+        rangeSlider.valueTo = roundedHighestReviews.toFloat()
+        rangeSliderFrom = rangeSlider.valueFrom
+        rangeSliderTo = rangeSlider.valueTo
+        rangeSlider.stepSize = 10f 
+
+        var placesInRange: Int
+        var min: Float = 0f
+        var max: Float = roundedHighestReviews.toFloat()
+
+        // Display a button as selected if its category is selected
         val initialSelectedButton: TextView? = when (selectedCategory) {
             "M" -> dialogView.findViewById(R.id.cluster_m_button)
             "H" -> dialogView.findViewById(R.id.cluster_h_button)
@@ -747,45 +798,67 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             )
         }
 
-        var selectedTextView = initialSelectedButton
-
-        // Set slider range and steps
-        rangeSlider.valueFrom = 0f
-        rangeSlider.valueTo = roundedHighestReviews.toFloat()
-        rangeSlider.stepSize = 10f 
-
-        var placesInRange: Int
-
-        // Set slider buttons and display information
-        if (previousMin != 0f || previousMax != 0f) {
-            rangeSlider.setValues(previousMin, previousMax)
-            
-            // adjust range indicator position after view is drawn
-            sliderValue.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
-                override fun onGlobalLayout() {
-                    sliderValue.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                    sliderValue.x = sliderValuePositionX?.toFloat() ?: 0.0f
-                }
-            })
-
-            sliderValue.text = "${previousMin.toInt()} - ${previousMax.toInt()}"
-            placesInRange = results.count { (it.userRatingsTotal ?: 0) in previousMin.toInt()..previousMax.toInt() }
-
+        // Set the categories' min and max slider positions
+        if (selectedCategory == "Manual") {
+            min = previousMin
+            Log.d("sliderDebug", "previous Min for manual: $previousMin")
+            max = previousMax
+            Log.d("sliderDebug", "previous Max for manual: $previousMax")
+        } else if (selectedCategory == "All") {
+            min = 0f
+            Log.d("sliderDebug", "Min for all: $min")
+            max = roundedHighestReviews.toFloat()
+            Log.d("sliderDebug", "Max for all: $max")
         } else {
-            rangeSlider.setValues(0f, roundedHighestReviews.toFloat())
-            sliderValue.text = "0 - ${roundedHighestReviews.toInt()}"
-            placesInRange = results.count { (it.userRatingsTotal ?: 0) in 0..roundedHighestReviews.toInt() }
+            val categoryRange = clusterRanges.find { it.label == selectedCategory }
+            categoryRange?.let {
+                min = it.min.toFloat()
+                Log.d("sliderDebug", "min for cat: $min")
+                max = roundedHighestReviews.toFloat()
+                Log.d("sliderDebug", "max for cat: $max")
+            }
         }
+        rangeSlider.setValues(min, max)
+        Log.d("sliderDebug", "set min: $min")
+        Log.d("sliderDebug", "set max: $max")
 
+        // Display slider range, position it midway between sliders
+        sliderValue.text = "${min.toInt()} - ${max.toInt()}"
+        
+        sliderValue.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                sliderValue.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                
+                Log.d("sliderDebug", "slider width: ${rangeSlider.width}")
+                Log.d("sliderDebug", "slider indicator width: ${sliderValue.width}")
+                
+                sliderValuePositionX = calculateSliderValuePositionX(
+                    min,
+                    max,
+                    rangeSlider.width,
+                    rangeSlider.valueFrom,
+                    rangeSlider.valueTo,
+                    sliderValue.width
+                )
+                Log.d("sliderDebug", "calculated slider position: $sliderValuePositionX")
+                
+                sliderValue.x = sliderValuePositionX?.toFloat() ?: 0.0f
+            }
+        })
+        Log.d("sliderDebug", "initial set slider.x: ${sliderValue.x}")
+
+        // Display number of places in range
+        placesInRange = results.count { (it.userRatingsTotal ?: 0) in min.toInt()..max.toInt() }
         numberOfPlacesText.text = "$placesInRange ${if (placesInRange == 1) "place" else "places"}"
 
-        // set sliders by clicking cluster buttons
+        var selectedTextView = initialSelectedButton // debug - might not need
 
+        // Set sliders by clicking cluster buttons
         for (i in 0 until reviewCountClusterSelector.childCount step 2) {
             val clusterTextView: TextView = reviewCountClusterSelector.getChildAt(i) as TextView
             
             clusterTextView.setOnClickListener { view ->
-                // Keep one button always selected
+                // Cannot deselect a button by clicking on it
                 if (view.isSelected) {
                     return@setOnClickListener
                 }
@@ -805,67 +878,45 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 )
 
                 selectedCategory = when (view.id) {
-                    R.id.cluster_all_button -> {
-                        rangeSlider.setValues(0f, roundedHighestReviews.toFloat())
-                        "All"
-                    }
+                    R.id.cluster_all_button -> "All"
                     R.id.cluster_m_button -> "M"
                     R.id.cluster_h_button -> "H"
                     R.id.cluster_s_button -> "S"
                     else -> "All"
                 }
 
-                val categoryRange = clusterRanges.find { it.label == selectedCategory }
-                categoryRange?.let {
-                    rangeSlider.setValues(it.min.toFloat(), roundedHighestReviews.toFloat())
+                if (selectedCategory == "All") {
+                    rangeSlider.setValues(0f, roundedHighestReviews.toFloat())
+                } else {
+                    val categoryRange = clusterRanges.find { it.label == selectedCategory }
+                    categoryRange?.let {
+                        rangeSlider.setValues(it.min.toFloat(), roundedHighestReviews.toFloat())
+                    }
                 }
             }
         }
 
-        // prevent sliders passing each other, update displayed info as sliders move 
+        // Update displayed info as sliders move 
         rangeSlider.addOnChangeListener { slider, _, _ ->
             val min = slider.values[0]
             val max = slider.values[1] 
 
-            if (max - min < 10) {
-                if (min != previousMin) {
-                    slider.setValues(max - 10, max)
-                } else if (max != previousMax) {
-                    slider.setValues(min, min + 10)
-                }
-            } else {
-                previousMin = min
-                previousMax = max
-            }    
-
-            val rangeSliderWidth = rangeSlider.width
-            val leftThumbPos = rangeSliderWidth * ((min - rangeSlider.valueFrom) / (rangeSlider.valueTo - rangeSlider.valueFrom))
-            val rightThumbPos = rangeSliderWidth * ((max - rangeSlider.valueFrom) / (rangeSlider.valueTo - rangeSlider.valueFrom))
-            val midpoint = (leftThumbPos + rightThumbPos) / 2
-
-            val maxAllowedPosition = rangeSliderWidth - sliderValue.width
-
-            val adjustedPosition = midpoint - sliderValue.width / 2
-
-            sliderValue.x = when {
-                adjustedPosition < 0 -> 0f
-                adjustedPosition > maxAllowedPosition -> maxAllowedPosition.toFloat()
-                else -> adjustedPosition
-            }
-
-            sliderValuePositionX = sliderValue.x
-
+            // Update slider information
+            sliderValue.x = calculateSliderValuePositionX(
+                min,
+                max,
+                rangeSlider.width,
+                rangeSlider.valueFrom,
+                rangeSlider.valueTo,
+                sliderValue.width
+            )
             sliderValue.text = "${(min.toInt() / 10) * 10} - ${(max.toInt() / 10) * 10}"
-
             placesInRange = results.count { (it.userRatingsTotal ?: 0) in min.toInt()..max.toInt() }
             numberOfPlacesText.text = "$placesInRange ${if (placesInRange == 1) "place" else "places"}"
-            
         }
 
         rangeSlider.addOnSliderTouchListener(object : RangeSlider.OnSliderTouchListener {
             override fun onStartTrackingTouch(slider: RangeSlider) {
-                previousMin = slider.values[0]
-                previousMax = slider.values[1]
                 if (selectedTextView?.isSelected == true) {
                     selectedTextView?.isSelected = false
                     selectedTextView?.setCompoundDrawablesWithIntrinsicBounds(0,0,0,0)
@@ -883,14 +934,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         doneButton.setOnClickListener {
-            
-            // filter by range
             val minCount = rangeSlider.values[0].toInt()
             val maxCount = rangeSlider.values[1].toInt()
-
+            
+            // Filter by range
             filterReviewsbyCount(results, minCount, maxCount)
 
-            // display selected range
+            // Display selected range in filter button
             if (minCount != 0 || maxCount != roundedHighestReviews.toInt()) {
                 val roundedMinCount = (floor(minCount / 10.0) * 10).toInt()
                 val roundedMaxCount = (ceil(maxCount / 10.0) * 10).toInt()
@@ -902,6 +952,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     R.drawable.ic_arrow_drop_down_black, 
                     0
                 )
+                reviewCountButtonText = reviewCountButton.text.toString()
+                isReviewCountButtonActive = true
+            // If full range selected, reset filter button display
             } else {
                 reviewCountButton.text = "Reviews"
                 updateButtonBackground(reviewCountButton, R.drawable.rounded_corners, R.color.colorBackground)
@@ -911,7 +964,27 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     R.drawable.ic_arrow_drop_down_black, 
                     0
                 )
+                reviewCountButtonText = "Reviews"
+                isReviewCountButtonActive = false
             }
+
+            // Update super filter button
+            if (selectedCategory == "S") {
+                updateButtonBackground(superReviewButton, R.drawable.round_normal, R.color.colorButtonActive)
+                isSuperReviewFilterApplied = true
+            } else {
+                updateButtonBackground(superReviewButton, R.drawable.round_normal, R.color.colorBackground)
+                isSuperReviewFilterApplied = false
+            }
+
+            // Save states
+            isDoneButtonClicked = true
+            previousMin = rangeSlider.values[0]
+            previousMax = rangeSlider.values[1]
+            dialogSetCategory = selectedCategory
+            dialogSetMin = previousMin
+            dialogSetMax = previousMax
+            dialogSetSliderValuePositionX = sliderValuePositionX
 
             bottomSheetDialog.dismiss()
         }
@@ -1029,15 +1102,59 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // super review filter logic
     private fun toggleSuperReviewFilter(accumulatedResults: List<PlaceData>, clusterRanges: List<ClusterRange>) {
+        
         isSuperReviewFilterApplied = !isSuperReviewFilterApplied
 
         if (isSuperReviewFilterApplied) {
             updateButtonBackground(superReviewButton, R.drawable.round_normal, R.color.colorButtonActive)
             filterReviewsbyCluster(accumulatedResults, "S", clusterRanges)
+            selectedCategory = "S"
+            val categoryRange = clusterRanges.find { it.label == selectedCategory }
+            categoryRange?.let {
+                val superMinCount = (floor(it.min / 10.0) * 10).toInt()
+                val superMaxCount = (ceil(it.max / 10.0) * 10).toInt()
+                reviewCountButton.text = "$superMinCount - $superMaxCount"
+                updateButtonBackground(reviewCountButton, R.drawable.rounded_corners, R.color.colorButtonActive)
+                reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(
+                    R.drawable.ic_check,
+                    0,
+                    R.drawable.ic_arrow_drop_down_black,
+                    0
+                )
+            }
         } else {
+            // Change display
             updateButtonBackground(superReviewButton, R.drawable.round_normal, R.color.colorBackground)
-            addMarkersToMap(accumulatedResults, clusters, moveCamera = false)
-            addResultsToList(accumulatedResults)
+            
+            // Revert results
+            if (isDoneButtonClicked) {
+                filterReviewsbyCount(accumulatedResults, dialogSetMin.toInt(), dialogSetMax.toInt())
+            } else {
+                filterReviewsbyCount(accumulatedResults, 0, roundedHighestReviews.toInt())
+            }
+
+            // Revert sliderDialog display
+            selectedCategory = dialogSetCategory
+            previousMin = dialogSetMin
+            previousMax = dialogSetMax
+            sliderValuePositionX = dialogSetSliderValuePositionX
+            reviewCountButton.text = reviewCountButtonText
+            updateButtonBackground(reviewCountButton, R.drawable.rounded_corners, if (isReviewCountButtonActive) R.color.colorButtonActive else R.color.colorBackground)
+            if (isReviewCountButtonActive) {
+                reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(
+                    R.drawable.ic_check,
+                    0,
+                    R.drawable.ic_arrow_drop_down_black,
+                    0
+                )
+            } else {
+                reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(
+                    0,
+                    0,
+                    R.drawable.ic_arrow_drop_down_black,
+                    0
+                )
+            }
         }
     }
 
@@ -1055,7 +1172,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         if (originalResults.isEmpty()) {
             originalResults = results
         }
-
 
         // clear existing views
         resultsContainer.removeAllViews()
@@ -1167,4 +1283,28 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    private fun calculateSliderValuePositionX(min: Float, max: Float, sliderWidth: Int, valueFrom: Float, valueTo: Float, sliderValueWidth: Int): Float {
+        var output = 0f
+        
+        val leftThumbPos = sliderWidth * ((min - valueFrom) / (valueTo - rangeSliderFrom))
+        Log.d("sliderDebug", "left thumb: $leftThumbPos")
+        val rightThumbPos = sliderWidth * ((max - valueFrom) / (valueTo - rangeSliderFrom))
+        Log.d("sliderDebug", "right thumb: $rightThumbPos")
+        val midpoint = (leftThumbPos + rightThumbPos) / 2
+        Log.d("sliderDebug", "midpoint: $midpoint")
+
+        val maxAllowedPosition = sliderWidth - sliderValueWidth
+        Log.d("sliderDebug", "max allowed: $maxAllowedPosition")
+        val adjustedPosition = midpoint - sliderValueWidth / 2
+        Log.d("sliderDebug", "adjusted pos: $adjustedPosition")
+
+        output = when {
+            adjustedPosition < 0 -> 0f
+            adjustedPosition > maxAllowedPosition -> maxAllowedPosition.toFloat()
+            else -> adjustedPosition
+        }
+
+        Log.d("sliderDebug", "slider value position x within private fun: $output")
+        return output
+    }
 }
