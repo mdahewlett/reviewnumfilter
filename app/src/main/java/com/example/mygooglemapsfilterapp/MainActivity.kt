@@ -375,6 +375,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     }
                     BottomSheetBehavior.STATE_COLLAPSED -> {
                         scrollView.isEnabled = false
+                        resultsSortButton.visibility = View.GONE
                     }
                     BottomSheetBehavior.STATE_HALF_EXPANDED -> {
                         scrollView.isEnabled = false
@@ -383,6 +384,13 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }
 
             override fun onSlide(bottomSheet: View, slideOffset: Float) {
+                if (slideOffset > 0) {
+                    resultsSortButton.visibility = View.VISIBLE
+                    resultsSortButton.alpha = slideOffset
+                } else {
+                    resultsSortButton.visibility = View.GONE
+                }
+                
                 if (slideOffset > 0.66) {
                     // move super filter button to not obscure clear results button
                     val superButtonParams = superReviewButton.layoutParams as ViewGroup.MarginLayoutParams
@@ -629,9 +637,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                                 // Add places to results list
                                 addResultsToList(accumulatedResults)
-
-                                // Enable sort button
-                                resultsSortButton.visibility = View.VISIBLE
 
                                 // Display results bottom sheet
                                 bottomSheet.visibility = View.VISIBLE
@@ -1280,7 +1285,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun showResultsView() {
         resultsTitle.text = "Results"
-        resultsSortButton.visibility = View.VISIBLE
+        if (bottomSheetBehavior.state != BottomSheetBehavior.STATE_COLLAPSED) {
+            resultsSortButton.visibility = View.VISIBLE
+        } else {
+            resultsSortButton.visibility = View.GONE
+        }
         scrollView.visibility = View.VISIBLE
         placeDetailsLayout.visibility = View.GONE
         resetSelectedMarker()
