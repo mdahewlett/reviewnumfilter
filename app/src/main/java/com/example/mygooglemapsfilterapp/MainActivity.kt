@@ -12,6 +12,7 @@ import android.view.inputmethod.InputMethodManager
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.Build
 import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.ViewTreeObserver
@@ -177,6 +178,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Typesafety
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or 
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        } else {
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        }
 
         // Connect to Google Places platform
         val apiKey = BuildConfig.PLACES_API_KEY
@@ -431,9 +445,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
 
-        // Enable zoom controls for debugging
-        // mMap.uiSettings.isZoomControlsEnabled = true
-
         // If missing existing location permission
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
             ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -597,7 +608,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         } else {
                             runOnUiThread {
                                 if (accumulatedResults.isEmpty()) {
+                                    // Hide loading state
+                                    handler.removeCallbacks(progressRunnable)
+                                    loadingStateMessage.visibility = View.GONE
+
+                                    // Hide results sheet
+                                    resultsContainer.removeAllViews()
+                                    resetReviewFilter()
+                                    showResultsView()
+                                    bottomSheet.visibility = View.GONE
+                                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+
+                                    // Clear map  
+                                    mMap.clear()
+
                                     showNoResultsDialog()
+
                                     return@runOnUiThread
                                 }
                                 
@@ -1079,12 +1105,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // No results dialog logic
     private fun showNoResultsDialog() {
-
-        handler.removeCallbacks(progressRunnable)
-        loadingStateMessage.visibility = View.GONE
-
-        bottomSheet.visibility = View.GONE
-        bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
 
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_noresults, null)
         val closeButton = dialogView.findViewById<Button>(R.id.no_results_close_button)

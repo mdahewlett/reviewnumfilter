@@ -25,8 +25,10 @@
             android:value="@string/google_maps_key"/> 
        
         <!-- Main Activity -->
-        <activity android:name=".MainActivity"
-                    android:exported="true">
+        <activity 
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize">
 
             <!-- filter lets other apps use this apps functionality if those apps can't -->
             <!-- Like when I want to view a PDF but the app I'm in doesn't have a viewer -->
