@@ -1086,6 +1086,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // No results dialog logic
     private fun showNoResultsDialog() {
 
+        handler.removeCallbacks(progressRunnable)
+        loadingStateMessage.visibility = View.GONE
+
+        bottomSheet.visibility = View.GONE
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_noresults, null)
         val closeButton = dialogView.findViewById<Button>(R.id.no_results_close_button)
 
