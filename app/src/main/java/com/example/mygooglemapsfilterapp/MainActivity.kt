@@ -289,6 +289,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Search view logic
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?) : Boolean {
+                Log.d("searchDebug", "Search submitted: $query")
+                searchView.clearFocus()
                 query?.let { 
                     if (checkLocationPermission()) {
                         mFusedLocationProviderClient.lastLocation.addOnSuccessListener { location: Location? ->
@@ -801,26 +803,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Set the categories' min and max slider positions
         if (selectedCategory == "Manual") {
             min = previousMin
-            Log.d("sliderDebug", "previous Min for manual: $previousMin")
             max = previousMax
-            Log.d("sliderDebug", "previous Max for manual: $previousMax")
         } else if (selectedCategory == "All") {
             min = 0f
-            Log.d("sliderDebug", "Min for all: $min")
             max = roundedHighestReviews.toFloat()
-            Log.d("sliderDebug", "Max for all: $max")
         } else {
             val categoryRange = clusterRanges.find { it.label == selectedCategory }
             categoryRange?.let {
                 min = it.min.toFloat()
-                Log.d("sliderDebug", "min for cat: $min")
                 max = roundedHighestReviews.toFloat()
-                Log.d("sliderDebug", "max for cat: $max")
             }
         }
         rangeSlider.setValues(min, max)
-        Log.d("sliderDebug", "set min: $min")
-        Log.d("sliderDebug", "set max: $max")
 
         // Display slider range, position it midway between sliders
         sliderValue.text = "${min.toInt()} - ${max.toInt()}"
@@ -828,9 +822,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         sliderValue.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
             override fun onGlobalLayout() {
                 sliderValue.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                
-                Log.d("sliderDebug", "slider width: ${rangeSlider.width}")
-                Log.d("sliderDebug", "slider indicator width: ${sliderValue.width}")
                 
                 sliderValuePositionX = calculateSliderValuePositionX(
                     min,
@@ -840,12 +831,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     rangeSlider.valueTo,
                     sliderValue.width
                 )
-                Log.d("sliderDebug", "calculated slider position: $sliderValuePositionX")
                 
                 sliderValue.x = sliderValuePositionX?.toFloat() ?: 0.0f
             }
         })
-        Log.d("sliderDebug", "initial set slider.x: ${sliderValue.x}")
 
         // Display number of places in range
         placesInRange = results.count { (it.userRatingsTotal ?: 0) in min.toInt()..max.toInt() }
@@ -1308,16 +1297,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         var output = 0f
         
         val leftThumbPos = sliderWidth * ((min - valueFrom) / (valueTo - rangeSliderFrom))
-        Log.d("sliderDebug", "left thumb: $leftThumbPos")
         val rightThumbPos = sliderWidth * ((max - valueFrom) / (valueTo - rangeSliderFrom))
-        Log.d("sliderDebug", "right thumb: $rightThumbPos")
         val midpoint = (leftThumbPos + rightThumbPos) / 2
-        Log.d("sliderDebug", "midpoint: $midpoint")
 
         val maxAllowedPosition = sliderWidth - sliderValueWidth
-        Log.d("sliderDebug", "max allowed: $maxAllowedPosition")
         val adjustedPosition = midpoint - sliderValueWidth / 2
-        Log.d("sliderDebug", "adjusted pos: $adjustedPosition")
 
         output = when {
             adjustedPosition < 0 -> 0f
@@ -1325,7 +1309,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             else -> adjustedPosition
         }
 
-        Log.d("sliderDebug", "slider value position x within private fun: $output")
         return output
     }
 }
