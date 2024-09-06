@@ -1270,9 +1270,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 // Track previous state
                 previousBottomSheetState = bottomSheetBehavior.state
 
-                // Expand sheet and show place details
-                bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
-                showPlaceDetails(result)
+                // Update marker, expand sheet, and show place details
+                val marker = markerPlaceMap.entries.find { it.value.id == result.id }?.key
+
+                marker?.let {
+                    markerPlaceMap.keys.forEach { updateMarkers(it, isSelected = false) }
+
+                    updateMarkers(it, isSelected = true)
+                
+                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
+                    showPlaceDetails(result)
+                }
+
             }
 
             resultsContainer.addView(itemView)
