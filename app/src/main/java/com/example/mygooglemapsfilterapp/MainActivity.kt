@@ -18,6 +18,7 @@ import android.view.MotionEvent
 import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.view.Gravity
+import android.content.res.Resources
 
 // Android components
 import android.widget.RelativeLayout
@@ -805,10 +806,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             val bottomSheetDialog = dialogInterface as BottomSheetDialog
             val bottomSheetInternal = bottomSheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
             bottomSheetInternal?.let {
-                BottomSheetBehavior.from(it).state = BottomSheetBehavior.STATE_EXPANDED
-                it.layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT  // Ensure full height
+                val behavior = BottomSheetBehavior.from(it)
+                behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                behavior.peekHeight = ViewGroup.LayoutParams.MATCH_PARENT
+                
+                // Set the max height for the bottom sheet
+                val maxHeight = Resources.getSystem().displayMetrics.heightPixels * 0.785
+                it.layoutParams.height = maxHeight.toInt()
             }
         }
+
 
         updateReviewCountSummary(dialogView, clusterRanges)
 
