@@ -7,14 +7,36 @@
     android:padding="20dp">
 
     <TextView
-        android:id="@+id/number_of_reviews_text"
+        android:id="@+id/summary_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Number of reviews"
+        android:text="Review ranges"
         android:textSize="16sp"
         android:textStyle="bold"
         android:gravity="start"
-        android:layout_gravity="start" />
+        android:layout_gravity="start"
+        android:visibility="gone" />
+    
+    <LinearLayout
+        android:id="@+id/summary_content"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="24dp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/number_of_reviews_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Filter options"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:gravity="start"
+        android:layout_gravity="start"
+        android:layout_marginTop="24dp"/>
 
     <LinearLayout
         android:id="@+id/review_count_cluster_selector"

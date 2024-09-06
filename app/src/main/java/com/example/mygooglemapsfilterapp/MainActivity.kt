@@ -17,6 +17,7 @@ import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.ViewTreeObserver
 import android.view.WindowManager
+import android.view.Gravity
 
 // Android components
 import android.widget.RelativeLayout
@@ -31,6 +32,7 @@ import android.widget.ScrollView
 import com.google.android.material.slider.RangeSlider
 import android.widget.RadioGroup
 import android.widget.RadioButton
+import android.widget.GridLayout
 
 // Androidx libraries
 import androidx.appcompat.app.AppCompatActivity
@@ -127,7 +129,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     // Reviews
     private lateinit var reviewCountButton: Button
     private lateinit var superReviewButton: Button
-    private lateinit var reviewCountSummary: LinearLayout
     private lateinit var clusters: Map<Int, String>
     private var noSuper = false
     private var roundedHighestReviews: Float = 0f 
@@ -213,7 +214,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         myLocationButton = binding.myLocationButton
         reviewCountButton = binding.reviewCountButton
         superReviewButton = binding.superReviewButton
-        reviewCountSummary = binding.reviewCountSummary
         loadingStateMessage = binding.loadingStateMessage
         loadingProgressText = binding.loadingProgressText
         bottomSheet = binding.bottomSheet
@@ -252,11 +252,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         // Show/hide elements
-        bottomSheet.visibility = View.GONE
-        reviewCountButton.visibility = View.GONE
-        superReviewButton.visibility = View.GONE
+        // bottomSheet.visibility = View.GONE
+        // reviewCountButton.visibility = View.GONE
+        // superReviewButton.visibility = View.GONE
         resultsSortButton.visibility = View.GONE
-        reviewCountSummary.visibility = View.GONE
         loadingStateMessage.visibility = View.GONE
 
         // My location button logic
@@ -336,8 +335,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun initBottomSheet() {
         
         // Button heights
-        val superButtonInitialMarginTop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80f, resources.displayMetrics).toInt()
-        val superButtonExpandedMarginTop = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 125f, resources.displayMetrics).toInt()
         val locationButtonInitialMarginBottom = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 160f, resources.displayMetrics).toInt()
         
         // Leave space above expanded sheet for search bar
@@ -406,10 +403,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
                 
                 if (slideOffset > 0.66) {
-                    // move super filter button to not obscure clear results button
-                    val superButtonParams = superReviewButton.layoutParams as ViewGroup.MarginLayoutParams
-                    superButtonParams.topMargin = superButtonInitialMarginTop + ((superButtonExpandedMarginTop - superButtonInitialMarginTop) * (slideOffset - 0.66f) * 3).toInt()
-                    superReviewButton.layoutParams = superButtonParams
+
 
                 } else if (slideOffset > 0) {
                     // move location button with sheet
@@ -640,7 +634,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                                     
                                     // Configure review count views
                                     updateButtonBackground(reviewCountButton, R.drawable.rounded_corners, R.color.colorBackground)
-                                    updateReviewCountSummary(clusterRanges)
                                     reviewCountButton.setOnClickListener {
                                         showSliderDialog(roundedHighestReviews.toInt(), accumulatedResults, clusterRanges)
                                     }
@@ -650,8 +643,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
                                     // Show review count views
                                     showFilters()
-                                    reviewCountSummary.visibility = View.VISIBLE
-
                                 }
 
                                 // Hide loading state
@@ -800,6 +791,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val reviewCountClusterSelector = dialogView.findViewById<LinearLayout>(R.id.review_count_cluster_selector)
 
         bottomSheetDialog.setContentView(dialogView)
+
+        updateReviewCountSummary(dialogView, clusterRanges)
 
         // Set slider range and steps
         rangeSlider.valueFrom = 0f
@@ -1088,18 +1081,53 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 }
 
 
-    private fun updateReviewCountSummary(clusterRanges: List<ClusterRange>) {
-        reviewCountSummary.removeAllViews()
+    private fun updateReviewCountSummary(dialogView: View, clusterRanges: List<ClusterRange>) {
+        val summaryTitle = dialogView.findViewById<TextView>(R.id.summary_title)
+        val summaryContent = dialogView.findViewById<LinearLayout>(R.id.summary_content)
+        
+        summaryContent.removeAllViews()
+
+        if (clusterRanges.isNullOrEmpty()) {
+            summaryTitle.visibility = View.GONE
+            summaryContent.visibility = View.GONE
+            return
+        }
+
+        summaryTitle.visibility = View.VISIBLE
+        summaryContent.visibility = View.VISIBLE
 
         // Sort the ranges to appear top to bottom high to low
         val labelOrder = listOf("S", "H", "M", "L")
         val sortedRanges = clusterRanges.sortedBy { labelOrder.indexOf(it.label) }
 
+        val summaryText = StringBuilder("Summary:\n")
         // Fill & display each range
         for (range in sortedRanges) {
             val textView = TextView(this)
-            textView.text = "${range.label}: ${range.min} - ${range.max}"
-            reviewCountSummary.addView(textView)
+            val label = if (range.label == "S") "🔥" else range.label
+            textView.text = "$label: ${range.min} - ${range.max}"
+            
+            val params = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            params.gravity = Gravity.CENTER_HORIZONTAL
+            textView.layoutParams = params
+
+            val paddingBottomDp = 24
+            val paddingLateralDp = 8
+            val scale = resources.displayMetrics.density
+            val paddingBottomPx = (paddingBottomDp * scale + 0.5f).toInt()
+            val paddingLateralPx = (paddingLateralDp * scale + 0.5f).toInt()
+
+            textView.setPadding(
+                paddingLateralPx, 
+                0, 
+                paddingLateralPx, 
+                paddingBottomPx
+                )
+                
+            summaryContent.addView(textView)
         }
     }
 
@@ -1128,7 +1156,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun resetReviewFilter() {
         reviewCountButton.visibility = View.GONE
         superReviewButton.visibility = View.GONE
-        reviewCountSummary.visibility = View.GONE
         reviewCountButton.text = "Reviews"
         reviewCountButton.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_arrow_drop_down_black, 0)
         previousMin = 0f
