@@ -251,9 +251,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
 
         // Show/hide elements
-        // bottomSheet.visibility = View.GONE
-        // reviewCountButton.visibility = View.GONE
-        // superReviewButton.visibility = View.GONE
+        bottomSheet.visibility = View.GONE
+        reviewCountButton.visibility = View.GONE
+        superReviewButton.visibility = View.GONE
         resultsSortButton.visibility = View.GONE
         loadingStateMessage.visibility = View.GONE
 
