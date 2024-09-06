@@ -801,6 +801,15 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         bottomSheetDialog.setContentView(dialogView)
 
+        bottomSheetDialog.setOnShowListener { dialogInterface ->
+            val bottomSheetDialog = dialogInterface as BottomSheetDialog
+            val bottomSheetInternal = bottomSheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+            bottomSheetInternal?.let {
+                BottomSheetBehavior.from(it).state = BottomSheetBehavior.STATE_EXPANDED
+                it.layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT  // Ensure full height
+            }
+        }
+
         updateReviewCountSummary(dialogView, clusterRanges)
 
         // Set slider range and steps
