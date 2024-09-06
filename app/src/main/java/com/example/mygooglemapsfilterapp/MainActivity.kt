@@ -166,6 +166,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // Place
     private lateinit var placeDetailsLayout: LinearLayout
+    private var previousState: String? = null
+    private var previousBottomSheetState: Int? = null
     private lateinit var placeCategoryReviewsRatingView: TextView
     private lateinit var placeAddressView: TextView
     private lateinit var placeHoursView: TextView
@@ -348,13 +350,24 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         // Clear search, results, and hide bottom sheet
         clearResultsButton.setOnClickListener {
-            mMap.clear()
-            searchView.setQuery("", false)
-            resultsContainer.removeAllViews()
-            resetReviewFilter()
-            showResultsView()
-            bottomSheet.visibility = View.GONE
-            bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            if (placeDetailsLayout.visibility == View.VISIBLE) {
+
+                placeDetailsLayout.visibility = View.GONE
+                showResultsView()
+                showFilters()
+                bottomSheetBehavior.state = previousBottomSheetState ?: BottomSheetBehavior.STATE_COLLAPSED
+                markerPlaceMap.keys.forEach { marker -> 
+                    updateMarkers(marker, isSelected = false)
+                }
+            } else {
+                mMap.clear()
+                searchView.setQuery("", false)
+                resultsContainer.removeAllViews()
+                resetReviewFilter()
+                showResultsView()
+                bottomSheet.visibility = View.GONE
+                bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            }
         }
 
         // Can always drag sheet from its top
@@ -395,17 +408,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             }
 
             override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                if (slideOffset > 0) {
-                    resultsSortButton.visibility = View.VISIBLE
-                    resultsSortButton.alpha = slideOffset
-                } else {
-                    resultsSortButton.visibility = View.GONE
+                if (placeDetailsLayout.visibility != View.VISIBLE) {
+                    if (slideOffset > 0) {
+                        resultsSortButton.visibility = View.VISIBLE
+                        resultsSortButton.alpha = slideOffset
+                    } else {
+                        resultsSortButton.visibility = View.GONE
+                    }
                 }
                 
-                if (slideOffset > 0.66) {
-
-
-                } else if (slideOffset > 0) {
+                if (slideOffset > 0) {
                     // move location button with sheet
                     val locationButtonParams = myLocationButton.layoutParams as ViewGroup.MarginLayoutParams
                     locationButtonParams.bottomMargin = (bottomSheet.height * slideOffset).toInt() + locationButtonInitialMarginBottom
@@ -469,14 +481,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         mMap.setOnMarkerClickListener { marker ->
             
+            // Track previous state
+            previousBottomSheetState = bottomSheetBehavior.state
+
+            // Deselect all markers
             markerPlaceMap.keys.forEach { updateMarkers(it, isSelected = false) }
 
+            // Select clicked marker
             updateMarkers(marker, isSelected = true)
 
+            // Get place, expand sheet, and show details
             val place = markerPlaceMap[marker]
             place?.let {
-                showPlaceDetails(it)
                 bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+                showPlaceDetails(it)
             }
             true
         }
@@ -1126,7 +1144,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 paddingLateralPx, 
                 paddingBottomPx
                 )
-                
+
             summaryContent.addView(textView)
         }
     }
@@ -1249,6 +1267,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             reviewCountTextView.text = "${result.userRatingsTotal} reviews"
 
             itemView.setOnClickListener {
+                // Track previous state
+                previousBottomSheetState = bottomSheetBehavior.state
+
+                // Expand sheet and show place details
                 bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
                 showPlaceDetails(result)
             }
@@ -1300,8 +1322,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // Hide/show views
         reviewCountButton.visibility = View.GONE
         superReviewButton.visibility = View.GONE
-        resultsSortButton.visibility = View.GONE
         scrollView.visibility = View.GONE
+        Log.d("VisibilityCheck", "Hiding sort button")
+        resultsSortButton.visibility = View.GONE
+        Log.d("VisibilityCheck", "Sort button visibility: ${resultsSortButton.visibility}")
         placeDetailsLayout.visibility = View.VISIBLE
     }
 
