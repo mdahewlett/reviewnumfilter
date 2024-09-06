@@ -172,7 +172,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var placeAddressView: TextView
     private lateinit var placeHoursView: TextView
     private lateinit var placePriceView: TextView
-    private lateinit var backToResultsButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
 
@@ -230,8 +229,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         placeHoursView = binding.placeHoursView
         placePriceView = binding.placePriceView
 
-        backToResultsButton = binding.backToResultsButton
-
         // Initialize bottom sheet
         bottomSheetBehavior = BottomSheetBehavior.from(binding.bottomSheet)
         initBottomSheet()
@@ -263,12 +260,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         // My location button logic
         myLocationButton.setOnClickListener {
             moveToCurrentLocation()
-        }
-
-        // Back to results button - debugging button
-        backToResultsButton.setOnClickListener {
-            showResultsView()
-            showFilters()
         }
 
         // Sort button logic
@@ -340,7 +331,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val locationButtonInitialMarginBottom = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 160f, resources.displayMetrics).toInt()
         
         // Leave space above expanded sheet for search bar
-        val bottomSheetOffset = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 60f, resources.displayMetrics).toInt()
+        val bottomSheetOffset = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 90f, resources.displayMetrics).toInt()
         bottomSheetBehavior.expandedOffset = bottomSheetOffset
 
         // Set configurations

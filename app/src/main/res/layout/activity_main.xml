@@ -216,14 +216,6 @@
                     android:textColor="@android:color/black"
                     android:layout_marginStart="8dp" />
             </LinearLayout>
-
-            <Button
-                android:id="@+id/back_to_results_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Back to Results"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/rounded_corners" />
         </LinearLayout>
         
     </LinearLayout>
